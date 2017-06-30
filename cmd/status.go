@@ -22,7 +22,7 @@ a RapidDeploy server and shows the server URL.`,
 			// If any error is thrown the session doesn't exist
 			fmt.Println(err.Error())
 			// FIXME: to check connection use 'listGroups' until we create a generic web service call!
-		} else if _, statusCode, err := rdClient.call("GET", "group/list", nil); err != nil || statusCode != 200 {
+		} else if _, statusCode, err := rdClient.call("GET", "group/list", nil, "text/xml"); err != nil || statusCode != 200 {
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
 			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
 		} else {

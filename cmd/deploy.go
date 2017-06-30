@@ -62,7 +62,7 @@ is used by default.`,
 		// Perform the REST call to get the data
 		resData, statusCode, err := rdClient.call("PUT", "deployment/"+
 			projectName+"/runjob/deploy/"+serverName+"/"+installName+"/"+configName+
-			"?packageName="+deployPackage, nil)
+			"?packageName="+deployPackage, nil, "text/xml")
 		if err != nil {
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
 			fmt.Printf("%v\n\n", err.Error())

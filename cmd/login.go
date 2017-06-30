@@ -13,7 +13,8 @@ import (
 
 // These values are set with the flags
 var rdUrl string
-var authToken string
+var username string
+var password string
 
 // loginCmd represents the login command
 var loginCmd = &cobra.Command{
@@ -37,13 +38,20 @@ calling this command again.`,
 
 		// Initialize the rdClient struct that will be saved
 		// in the login session file for future calls to RapidDeploy
-		rdClient.AuthToken = authToken
 		rdClient.BaseUrl = parsedUrl
+		rdClient.Username = username
+		rdClient.Password = password
 
-		// Perform a call to see the URL and authontication are correct
+		// This is necessary so an error is not thrown for empty authentication token
+		rdClient.AuthToken = "token"
+
+		resData, statusCode, err := rdClient.call("POST", "user/create/token", rdClient, "text/plain")
+		rdClient.AuthToken = string(resData)
+
+		// Perform a call to see the URL and authontication token are correct
 		fmt.Printf("Trying to log in to '%s'...\n\n", rdUrl)
 		// FIXME: to check connection use 'listGroups' until we create a generic web service call!
-		_, statusCode, err := rdClient.call("GET", "group/list", nil)
+		_, statusCode, err = rdClient.call("GET", "group/list", nil, "text/xml")
 
 		// Login failed - the call throws an error
 		if err != nil {
@@ -82,6 +90,7 @@ func init() {
 	RootCmd.AddCommand(loginCmd)
 
 	// The flags defined for this command
-	loginCmd.Flags().StringVarP(&authToken, "authToken", "a", "bXZhZG1pbjp7X01WQEVOQyNffVdHLzFmNVMreVpRPQ==", "The authentication token to validate the user identity. \n\t\t\t\tPlease refer to the following Url for information on how to generate it: \n\t\t\t\thttp://docs.midvision.com/LATEST/reference/tools/web-service-encrypter.html")
-	loginCmd.Flags().StringVarP(&rdUrl, "url", "u", "http://localhost:9090/MidVision", "Url to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVarP(&rdUrl, "url", "", "http://localhost:9090/MidVision", "URL used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVarP(&username, "username", "", "mvadmin", "Username used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVarP(&password, "password", "", "mvadmin", "Password used to connect to the RapidDeploy server.")
 }

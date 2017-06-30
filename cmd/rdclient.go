@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,12 +28,14 @@ type (
 		// These parameters will be saved as a JSON file in the home folder.
 		BaseUrl   *url.URL `json:"url"`
 		AuthToken string   `json:"token"`
+		Username  string   `json:"param1"`
+		Password  string   `json:"param2"`
 	}
 
 	// Declared here as it is used in different entity structs.
 	PluginDataSet struct {
-		Id         int16  `xml:" id,omitempty"`
-		PluginData string `xml:" pluginData,omitempty"`
+		Id         int16  `xml:"id,omitempty"`
+		PluginData string `xml:"pluginData,omitempty"`
 	}
 
 	//**********************************************
@@ -85,8 +88,6 @@ func (rdc *RDClient) loadLoginFile() error {
 	if err := json.Unmarshal(content, rdc); err != nil {
 		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.\n")
 	} else {
-		// TODO: encrypt the authentication token in the login file!!!
-		// rdc.AuthToken = decodeAuthToken(rdc.AuthToken)
 		if err != nil {
 			return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.\n")
 		}
@@ -96,9 +97,6 @@ func (rdc *RDClient) loadLoginFile() error {
 
 func (rdc *RDClient) saveLoginFile() error {
 	loginFilePath := path.Join(getHome(), loginFile)
-
-	// TODO: encrypt the authentication token in the login file!!!
-	// rdc.AuthToken = encodeAuthToken(rdc.AuthToken)
 
 	content, err := json.MarshalIndent(rdc, "", "\t")
 	if err != nil {
@@ -113,7 +111,7 @@ func (rdc *RDClient) removeLoginFile() error {
 	return os.Remove(loginFilePath)
 }
 
-func (rdc *RDClient) call(method string, relUrl string, bodyContent interface{}) ([]byte, int, error) {
+func (rdc *RDClient) call(method string, relUrl string, bodyContent interface{}, contentType string) ([]byte, int, error) {
 
 	if rdc.BaseUrl == nil {
 		return nil, -1, fmt.Errorf("No URL found in login session.\nPlease, perform a new login before requesting any action.\n")
@@ -129,19 +127,33 @@ func (rdc *RDClient) call(method string, relUrl string, bodyContent interface{})
 		return nil, -1, err
 	}
 
+	// Prepare the body of the request
+	reqData, err := json.Marshal(bodyContent)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	if debug {
+		fmt.Printf("[DEBUG] Request body = %v\n", string(reqData))
+	}
+
 	// Create the HTTP request
-	// TODO: the body may be required for some services!!
-	req, err := http.NewRequest(method, reqUrl.String(), nil)
+	req, err := http.NewRequest(method, reqUrl.String(), bytes.NewBuffer(reqData))
 	if err != nil {
 		return nil, -1, err
 	}
 
 	// Set the headers of the request
-	req.Header.Add("Content-Type", "text/xml")
+	if contentType == "" {
+		contentType = "text/plain"
+	}
+	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("Authorization", rdc.AuthToken)
 
 	if debug {
 		fmt.Printf("[DEBUG] Request URL = %v\n", req.URL)
+		fmt.Printf("[DEBUG] Request method = %v\n", req.Method)
+		fmt.Printf("[DEBUG] Request header = %v\n", req.Header)
 		fmt.Printf("[DEBUG] Authentication token = %v\n", rdc.AuthToken)
 	}
 

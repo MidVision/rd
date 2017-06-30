@@ -46,7 +46,7 @@ may need to run the 'listJobPlans' command.`,
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("PUT", "deployment/jobPlan/run/"+jobPlanId, nil)
+		resData, statusCode, err := rdClient.call("PUT", "deployment/jobPlan/run/"+jobPlanId, nil, "text/xml")
 		if err != nil {
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
 			fmt.Printf("%v\n\n", err.Error())
@@ -68,26 +68,16 @@ may need to run the 'listJobPlans' command.`,
 		}
 
 		// Print data in a table
-		printTable := true
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		if len(rdDeploy.Body.Div[1].Div[0].Ul.Li) != 0 {
 			table.SetAutoMergeCells(true)
 			for _, message := range rdDeploy.Body.Div[1].Div[0].Ul.Li {
-				if strings.Contains(message.Span[1], "No entity found") {
-					printTable = false
-				} else {
-					replacedTitle := strings.Replace(message.Span[1], "com.midvision.rapiddeploy.domain.jobplan.", "", -1)
-					table.Append([]string{message.Span[0], replacedTitle})
-				}
+				replacedTitle := strings.Replace(message.Span[1], "com.midvision.rapiddeploy.domain.jobplan.", "", -1)
+				table.Append([]string{message.Span[0], replacedTitle})
 			}
 		}
-		if printTable {
-			table.Render()
-		} else {
-			fmt.Println("Invalid target name '" + targetName + "'")
-			fmt.Println("Please check the server and the installation names.")
-		}
+		table.Render()
 		fmt.Println()
 	},
 }

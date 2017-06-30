@@ -53,7 +53,7 @@ var listProjectsCmd = &cobra.Command{
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("GET", "project/list", nil)
+		resData, statusCode, err := rdClient.call("GET", "project/list", nil, "text/xml")
 		if err != nil {
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
 			fmt.Printf("%v\n\n", err.Error())
