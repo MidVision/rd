@@ -20,7 +20,7 @@ var debug bool = false
 var RootCmd = &cobra.Command{
 	Use:   "rd",
 	Short: "Command line interface for the RapidDeploy tool.",
-	Long:  `Command line interface for the RapidDeploy tool.`,
+	Long:  `RapidDeploy CLI - Command line interface for the RapidDeploy tool.`,
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
