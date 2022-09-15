@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.midvision.plugins</groupId>
@@ -26,11 +28,16 @@
 	</developers>
 
 	<properties>
-		<go.sdk.version>1.8.3</go.sdk.version>
-		<go.root>/usr/local/go</go.root>
-		<go.wrapper.plugin.version>2.1.5</go.wrapper.plugin.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<mvn.version>3.0</mvn.version>
+
+		<!-- ******* Using default Go SDK ******* -->
+		<!-- <go.sdk.version>1.8.3</go.sdk.version> -->
+		<!-- <go.root>/usr/local/go</go.root> -->
+
+		<go.wrapper.plugin.version>2.3.10</go.wrapper.plugin.version>
+
+		<maven.install.plugin.version>3.0.1</maven.install.plugin.version>
+		<maven.deploy.plugin.version>3.0.0</maven.deploy.plugin.version>
 	</properties>
 
 	<inceptionYear>2017</inceptionYear>
@@ -43,10 +50,6 @@
 		</license>
 	</licenses>
 
-	<prerequisites>
-		<maven>${mvn.version}</maven>
-	</prerequisites>
-
 	<build>
 		<sourceDirectory>${basedir}</sourceDirectory>
 		<directory>${basedir}${file.separator}go</directory>
@@ -57,27 +60,14 @@
 				<version>${go.wrapper.plugin.version}</version>
 				<extensions>true</extensions>
 				<configuration>
-					<goRoot>${go.root}</goRoot>
-					<goVersion>${go.sdk.version}</goVersion>
-					<goPath>${project.build.directory}</goPath>
+					<!-- ******* Using default Go SDK ******* -->
+					<!-- <goRoot>${go.root}</goRoot> -->
+					<!-- <goVersion>${go.sdk.version}</goVersion> -->
+					<!-- <goPath>${project.build.directory}</goPath> -->
+
 					<!-- <verbose>true</verbose> -->
 				</configuration>
 				<executions>
-					<execution>
-						<id>default-get</id>
-						<configuration>
-							<buildFlags>
-								<flag>-u</flag>
-							</buildFlags>
-							<packages>
-								<package>github.com/MidVision/rd</package>
-								<package>github.com/mitchellh/go-homedir</package>
-								<package>github.com/olekukonko/tablewriter</package>
-								<package>github.com/spf13/cobra</package>
-								<package>github.com/inconshreveable/mousetrap</package>
-							</packages>
-						</configuration>
-					</execution>
 					<execution>
 						<id>default-build</id>
 						<phase>none</phase>
@@ -179,17 +169,17 @@
 						<id>default-mvninstall</id>
 						<phase>none</phase>
 					</execution>
-					<execution>
-						<id>default-install</id>
-						<phase>none</phase>
-					</execution>
 				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>
-				<version>2.5.2</version>
+				<version>${maven.install.plugin.version}</version>
 				<executions>
+					<execution>
+						<id>default-install</id>
+						<phase>none</phase>
+					</execution>
 					<execution>
 						<id>install-mac</id>
 						<phase>install</phase>
@@ -265,6 +255,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-deploy-plugin</artifactId>
+				<version>${maven.deploy.plugin.version}</version>
 				<configuration>
 					<skip>true</skip>
 				</configuration>
