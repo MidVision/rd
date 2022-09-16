@@ -83,6 +83,7 @@
 								<main>main.go</main>
 							</packages>
 							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}mac</resultFolder>
+							<resultName>${project.build.finalName}.bin</resultName>
 						</configuration>
 					</execution>
 					<execution>
@@ -97,6 +98,7 @@
 								<main>main.go</main>
 							</packages>
 							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}linux64</resultFolder>
+							<resultName>${project.build.finalName}.bin</resultName>
 						</configuration>
 					</execution>
 					<execution>
@@ -111,6 +113,7 @@
 								<main>main.go</main>
 							</packages>
 							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}linux32</resultFolder>
+							<resultName>${project.build.finalName}.bin</resultName>
 						</configuration>
 					</execution>
 					<execution>
@@ -187,7 +190,7 @@
 							<goal>install-file</goal>
 						</goals>
 						<configuration>
-							<file>${project.build.directory}${file.separator}bin${file.separator}mac${file.separator}${project.build.finalName}</file>
+							<file>${project.build.directory}${file.separator}bin${file.separator}mac${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
 							<artifactId>${project.artifactId}-mac</artifactId>
 							<version>${project.version}</version>
@@ -201,7 +204,7 @@
 							<goal>install-file</goal>
 						</goals>
 						<configuration>
-							<file>${project.build.directory}${file.separator}bin${file.separator}linux64${file.separator}${project.build.finalName}</file>
+							<file>${project.build.directory}${file.separator}bin${file.separator}linux64${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
 							<artifactId>${project.artifactId}-linux64</artifactId>
 							<version>${project.version}</version>
@@ -215,7 +218,7 @@
 							<goal>install-file</goal>
 						</goals>
 						<configuration>
-							<file>${project.build.directory}${file.separator}bin${file.separator}linux32${file.separator}${project.build.finalName}</file>
+							<file>${project.build.directory}${file.separator}bin${file.separator}linux32${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
 							<artifactId>${project.artifactId}-linux32</artifactId>
 							<version>${project.version}</version>
