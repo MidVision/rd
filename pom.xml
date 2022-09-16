@@ -192,8 +192,9 @@
 						<configuration>
 							<file>${project.build.directory}${file.separator}bin${file.separator}mac${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}-mac</artifactId>
+							<artifactId>${project.artifactId}</artifactId>
 							<version>${project.version}</version>
+							<classifier>mac</classifier>
 							<packaging>bin</packaging>
 						</configuration>
 					</execution>
@@ -206,8 +207,9 @@
 						<configuration>
 							<file>${project.build.directory}${file.separator}bin${file.separator}linux64${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}-linux64</artifactId>
+							<artifactId>${project.artifactId}</artifactId>
 							<version>${project.version}</version>
+							<classifier>linux64</classifier>
 							<packaging>bin</packaging>
 						</configuration>
 					</execution>
@@ -220,8 +222,9 @@
 						<configuration>
 							<file>${project.build.directory}${file.separator}bin${file.separator}linux32${file.separator}${project.build.finalName}.bin</file>
 							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}-linux32</artifactId>
+							<artifactId>${project.artifactId}</artifactId>
 							<version>${project.version}</version>
+							<classifier>linux32</classifier>
 							<packaging>bin</packaging>
 						</configuration>
 					</execution>
@@ -234,8 +237,9 @@
 						<configuration>
 							<file>${project.build.directory}${file.separator}bin${file.separator}win64${file.separator}${project.build.finalName}.exe</file>
 							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}-win64</artifactId>
+							<artifactId>${project.artifactId}</artifactId>
 							<version>${project.version}</version>
+							<classifier>win64</classifier>
 							<packaging>exe</packaging>
 						</configuration>
 					</execution>
@@ -248,8 +252,9 @@
 						<configuration>
 							<file>${project.build.directory}${file.separator}bin${file.separator}win32${file.separator}${project.build.finalName}.exe</file>
 							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}-win32</artifactId>
+							<artifactId>${project.artifactId}</artifactId>
 							<version>${project.version}</version>
+							<classifier>win32</classifier>
 							<packaging>exe</packaging>
 						</configuration>
 					</execution>
