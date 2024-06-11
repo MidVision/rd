@@ -92,6 +92,7 @@ investigation.`,
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
 			fmt.Printf("%v\n\n", err.Error())
 			retcode = 1
+			return
 		}
 		if statusCode != 200 {
 			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
