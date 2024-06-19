@@ -1,6 +1,7 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
 // TODO: synchronous deployments.
+// TODO: default to localhost target.
 
 package cmd
 

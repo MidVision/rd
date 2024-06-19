@@ -23,9 +23,8 @@ const (
 var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verifies the RapidDeploy installation and retrieves useful information.",
-	Long: `Verifies the RapidDeploy installation and retrieves the system 
-information, configuration and logs of the server for further 
-investigation.`,
+	Long: `Verifies the RapidDeploy installation and retrieves the system information, configuration and 
+logs of the server in a ZIP file for further investigation.`,
 	// TODO
 	//The -mvcloud option retrieves also information about the
 	//MidVision Cloud product installed along with RapidDeploy.`,

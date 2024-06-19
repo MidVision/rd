@@ -1,5 +1,7 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
+// TODO: implement the login interactively.
+
 package cmd
 
 import (
