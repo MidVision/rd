@@ -14,7 +14,7 @@ import (
 var exportProjectName string
 
 var exportCmd = &cobra.Command{
-	Use:   "export",
+	Use:   "export PROJECT_NAME",
 	Short: "Exports a project from RapidDeploy.",
 	Long:  `This command exports a project from RapidDeploy into the current directory.`,
 	Run: func(cmd *cobra.Command, args []string) {

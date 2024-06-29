@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	homedir "github.com/mitchellh/go-homedir"
 	"io/ioutil"
@@ -51,7 +50,11 @@ func getHome() string {
 	return home
 }
 
-func call(method string, reqUrlStr string, bodyContent interface{}, header map[string]string) ([]byte, int, error) {
+// ONLY for development purposes.
+// Should always be 'false' by default.
+var genXML bool = false
+
+func call(method string, reqUrlStr string, bodyContent []byte, header map[string]string) ([]byte, int, error) {
 
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 
@@ -64,24 +67,12 @@ func call(method string, reqUrlStr string, bodyContent interface{}, header map[s
 		return nil, -1, err
 	}
 
-	// Prepare the body for the request
-	var reqData []byte
-	if bodyContent != nil {
-		reqData, err = json.Marshal(bodyContent)
-		if err != nil {
-			if debug {
-				fmt.Printf("[ERROR] Marshal body: %v\n", err)
-			}
-			return nil, -1, err
-		}
-	}
-
 	if debug {
-		fmt.Printf("[DEBUG] Request body = %v\n", string(reqData))
+		fmt.Printf("[DEBUG] Request body = %v\n", string(bodyContent))
 	}
 
 	// Create the HTTP request
-	req, err := http.NewRequest(method, reqUrl.String(), bytes.NewBuffer(reqData))
+	req, err := http.NewRequest(method, reqUrl.String(), bytes.NewBuffer(bodyContent))
 	if err != nil {
 		return nil, -1, err
 	}

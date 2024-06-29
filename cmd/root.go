@@ -5,13 +5,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"net/http"
 	"os"
 )
 
 // This is the client used to perform the REST calls to RapidDeploy.
 // It will be used in the different commands.
-var rdClient *RDClient
+var rdClient *RDClient = &RDClient{}
 
 // For debugging purposes
 var debug bool = false
@@ -34,7 +33,4 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Shows debugging information.")
-
-	// Initialize the RapidDeploy client for the different REST calls
-	rdClient = &RDClient{client: http.DefaultClient}
 }

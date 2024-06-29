@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -133,7 +134,14 @@ func checkLogin(loginUrl, loginUser, loginPass string) (bool, error) {
 	// This is necessary so an error is not thrown for empty authentication token
 	rdClient.AuthToken = "token"
 
-	resData, statusCode, err := rdClient.call("POST", "user/create/token", rdClient, "text/plain")
+	reqData, err := json.Marshal(rdClient)
+	if err != nil {
+		if debug {
+			fmt.Printf("[ERROR] Marshal rdClient: %v\n", err)
+		}
+		return false, err
+	}
+	resData, statusCode, err := rdClient.call(http.MethodPost, "user/create/token", reqData, "text/plain")
 	rdClient.AuthToken = string(resData)
 
 	if debug {

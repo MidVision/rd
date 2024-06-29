@@ -1,13 +1,13 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
+// TODO: use direct methods, direct actions, instead of just one 'call' method.
+
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -21,9 +21,6 @@ const (
 type (
 	// The client for the REST calls to RapidDeploy.
 	RDClient struct {
-		// The HTTP client to perform the REST calls.
-		client *http.Client
-
 		// URL and authentication token used to perform the calls.
 		// These parameters will be saved as a JSON file in the home folder.
 		BaseUrl   *url.URL `json:"url"`
@@ -69,10 +66,6 @@ type (
 	//**********************************************
 )
 
-// ONLY for development purposes.
-// Should always be 'false' by default.
-var genXML bool = false
-
 func (rdc *RDClient) loadLoginFile() error {
 	loginFilePath := path.Join(getHome(), loginFile)
 
@@ -111,7 +104,7 @@ func (rdc *RDClient) removeLoginFile() error {
 	return os.Remove(loginFilePath)
 }
 
-func (rdc *RDClient) call(method string, relUrl string, bodyContent interface{}, contentType string) ([]byte, int, error) {
+func (rdc *RDClient) call(method string, relUrl string, bodyContent []byte, contentType string) ([]byte, int, error) {
 
 	if rdc.BaseUrl == nil {
 		return nil, -1, fmt.Errorf("No URL found in login session.\nPlease, perform a new login before requesting any action.\n")
@@ -127,61 +120,18 @@ func (rdc *RDClient) call(method string, relUrl string, bodyContent interface{},
 		return nil, -1, err
 	}
 
-	// Prepare the body of the request
-	reqData, err := json.Marshal(bodyContent)
-	if err != nil {
-		return nil, -1, err
-	}
-
-	if debug {
-		fmt.Printf("[DEBUG] Request body = %v\n", string(reqData))
-	}
-
-	// Create the HTTP request
-	req, err := http.NewRequest(method, reqUrl.String(), bytes.NewBuffer(reqData))
-	if err != nil {
-		return nil, -1, err
-	}
-
+	header := make(map[string]string)
 	// Set the headers of the request
 	if contentType == "" {
 		contentType = "text/plain"
+
 	}
-	req.Header.Add("Content-Type", contentType)
-	req.Header.Add("Authorization", rdc.AuthToken)
+	header["Content-Type"] = contentType
+	header["Authorization"] = rdc.AuthToken
 
 	if debug {
-		fmt.Printf("[DEBUG] Request URL = %v\n", req.URL)
-		fmt.Printf("[DEBUG] Request method = %v\n", req.Method)
-		fmt.Printf("[DEBUG] Request header = %v\n", req.Header)
 		fmt.Printf("[DEBUG] Authentication token = %v\n", rdc.AuthToken)
 	}
 
-	// Perform the request
-	res, err := rdc.client.Do(req)
-	if err != nil {
-		return nil, -1, err
-	}
-
-	// Read the response
-	resData, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, -1, err
-	}
-
-	if debug {
-		fmt.Printf("[DEBUG] Response code = %v\n", res.StatusCode)
-		fmt.Printf("[DEBUG] Response body = %v\n", string(resData))
-	}
-	// This is just for development purposes.
-	// It will genenerate a file with the XML response
-	// to use afterwards to generate the Go lang structs.
-	// Make sure 'genXML' is always 'false' by default!
-	if genXML {
-		ioutil.WriteFile("aux.xml", resData, 0600)
-	}
-
-	res.Body.Close()
-
-	return resData, res.StatusCode, nil
+	return call(method, reqUrl.String(), bodyContent, header)
 }
