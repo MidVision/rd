@@ -1,5 +1,7 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
+// TODO: implement a silent mode.
+
 package cmd
 
 import (
@@ -17,9 +19,10 @@ var debug bool = false
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "rd",
-	Short: "Command line interface for the RapidDeploy tool.",
-	Long:  `RapidDeploy CLI - Command line interface for the RapidDeploy tool.`,
+	Use:     "rd",
+	Short:   "Command line interface for the RapidDeploy tool.",
+	Long:    `RapidDeploy CLI - Command line interface for the RapidDeploy tool.`,
+	Version: "1.3",
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
