@@ -55,9 +55,10 @@ logs of the server in a ZIP file for further investigation.`,
 			retcode = 1
 			return
 		}
-		err = os.WriteFile(os.TempDir()+systemInfoFilename, resData, 0644)
+		systemInfoFilePath := filepath.Join(os.TempDir(), systemInfoFilename)
+		err = os.WriteFile(systemInfoFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", os.TempDir()+logsFilename)
+			fmt.Println("Unable to create file:", systemInfoFilePath)
 			fmt.Printf("%v\n\n", err)
 			retcode = 1
 			return
@@ -77,9 +78,10 @@ logs of the server in a ZIP file for further investigation.`,
 			retcode = 1
 			return
 		}
-		err = os.WriteFile(os.TempDir()+propertiesFilename, resData, 0644)
+		propertiesFilePath := filepath.Join(os.TempDir(), propertiesFilename)
+		err = os.WriteFile(propertiesFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", os.TempDir()+logsFilename)
+			fmt.Println("Unable to create file:", propertiesFilePath)
 			fmt.Printf("%v\n\n", err)
 			retcode = 1
 			return
@@ -99,9 +101,10 @@ logs of the server in a ZIP file for further investigation.`,
 			retcode = 1
 			return
 		}
-		err = os.WriteFile(os.TempDir()+logsFilename, resData, 0644)
+		logsFilePath := filepath.Join(os.TempDir(), logsFilename)
+		err = os.WriteFile(logsFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", os.TempDir()+logsFilename)
+			fmt.Println("Unable to create file:", logsFilePath)
 			fmt.Printf("%v\n\n", err)
 			retcode = 1
 			return
@@ -129,7 +132,7 @@ logs of the server in a ZIP file for further investigation.`,
 		defer archiveWriter.Close()
 
 		// ===> Include the system info file
-		sysInfoFile, err := os.Open(os.TempDir() + systemInfoFilename)
+		sysInfoFile, err := os.Open(systemInfoFilePath)
 		defer sysInfoFile.Close()
 		if err != nil {
 			fmt.Printf("%v\n\n", err)
@@ -151,12 +154,12 @@ logs of the server in a ZIP file for further investigation.`,
 			return
 		}
 		if debug {
-			fmt.Printf("[DEBUG]    Removing the system info file: %v\n", sysInfoFile.Name())
+			fmt.Printf("[DEBUG]    Removing the system info file: %v\n", systemInfoFilePath)
 		}
-		os.Remove(os.TempDir() + systemInfoFilename)
+		os.Remove(systemInfoFilePath)
 
 		// ===> Include the properties file
-		propsFile, err := os.Open(os.TempDir() + propertiesFilename)
+		propsFile, err := os.Open(propertiesFilePath)
 		defer propsFile.Close()
 		if err != nil {
 			fmt.Printf("%v\n\n", err)
@@ -178,12 +181,12 @@ logs of the server in a ZIP file for further investigation.`,
 			return
 		}
 		if debug {
-			fmt.Printf("[DEBUG]    Removing the properties file: %v\n", propsFile.Name())
+			fmt.Printf("[DEBUG]    Removing the properties file: %v\n", propertiesFilePath)
 		}
-		os.Remove(os.TempDir() + propertiesFilename)
+		os.Remove(propertiesFilePath)
 
 		// ===> Include the logs file
-		zipReader, err := zip.OpenReader(os.TempDir() + logsFilename)
+		zipReader, err := zip.OpenReader(logsFilePath)
 		defer zipReader.Close()
 		if err != nil {
 			fmt.Printf("%v\n\n", err)
@@ -191,7 +194,7 @@ logs of the server in a ZIP file for further investigation.`,
 			return
 		}
 		if debug {
-			fmt.Printf("[DEBUG] Opening the logs ZIP file: %v\n", os.TempDir()+logsFilename)
+			fmt.Printf("[DEBUG] Opening the logs ZIP file: %v\n", logsFilePath)
 		}
 		for _, zipItem := range zipReader.File {
 			if debug {
@@ -226,9 +229,9 @@ logs of the server in a ZIP file for further investigation.`,
 			}
 		}
 		if debug {
-			fmt.Printf("[DEBUG]    Removing the logs ZIP file: %v\n", os.TempDir()+logsFilename)
+			fmt.Printf("[DEBUG]    Removing the logs ZIP file: %v\n", logsFilePath)
 		}
-		os.Remove(os.TempDir() + logsFilename)
+		os.Remove(logsFilePath)
 
 		// Show resulting ZIP file
 		fmt.Println("RapidDeploy information file: " + archiveAbsPath)
