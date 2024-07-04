@@ -1,7 +1,8 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
-// TODO: synchronous deployments.
 // TODO: default to localhost target.
+// TODO: provide log file path as a flag.
+// FIXME: "Configuration Name" not being shown in deployment summary.
 
 package cmd
 
@@ -11,11 +12,15 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 var deployPackage, targetName string
+var synchronous, logfile bool
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
@@ -79,42 +84,43 @@ is used by default.`,
 			os.Exit(1)
 		}
 
-		// Initialize the object that will contain the unmarshalled XML response
-		rdDeploy := new(Html)
-		// Unmarshall the XML response
-		err = xml.Unmarshal(resData, &rdDeploy)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Print data in a table
+		// Print deployment information in a table
 		printTable := true
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		if len(rdDeploy.Body.Div[1].Div[0].Ul.Li) != 0 {
-			table.SetAutoMergeCells(true)
-			for _, message := range rdDeploy.Body.Div[1].Div[0].Ul.Li {
-				if strings.Contains(message.Span[1], "No entity found") {
-					printTable = false
-				} else {
-					replacedTitle := strings.Replace(message.Span[0]+":", "Deployment Job ", "", -1)
-					table.Append([]string{replacedTitle, message.Span[1]})
-				}
+		table.SetAutoMergeCells(true)
+		for _, message := range getDeploymentMessages(resData) {
+			if strings.Contains(message.Span[1], "No entity found") {
+				printTable = false
+			} else {
+				replacedTitle := strings.Replace(message.Span[0]+":", "Deployment Job ", "", -1)
+				table.Append([]string{replacedTitle, message.Span[1]})
 			}
 		}
 		if printTable {
 			table.Render()
 		} else {
 			fmt.Println("Invalid target name '" + targetName + "'")
-			fmt.Println("Please check the server and the installation names.")
+			fmt.Println("Please check the server and the installation names.\n")
+			os.Exit(1)
 		}
+
+		// Deploying project synchronously
+		if synchronous {
+			fmt.Println()
+			fmt.Println("Deploying project in synchronous mode...")
+			jobId := getJobId(resData)
+			checkSynchronousDeploy(jobId)
+		}
+
 		fmt.Println()
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(deployCmd)
+	deployCmd.Flags().BoolVarP(&synchronous, "sync", "s", false, "Waits for the deployment to finish.")
+	deployCmd.Flags().BoolVarP(&logfile, "logfile", "l", false, "Retrieves the deployment log file. It must be used with the 'sync' option.")
 }
 
 // Returns a boolean value showing if the arguments were properly
@@ -176,4 +182,113 @@ func isDictionaryArg(s string) bool {
 	} else {
 		return false
 	}
+}
+
+func checkSynchronousDeploy(jobId string) {
+	logFilename := ""
+	timeToSleep := 0 * time.Second
+	jobRunning := true
+	for jobRunning {
+		time.Sleep(timeToSleep)
+		resData, statusCode, err := rdClient.call("GET", "deployment/display/job/"+jobId, nil, "text/xml")
+		if err != nil {
+			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
+			fmt.Printf("%v\n\n", err.Error())
+			os.Exit(1)
+		}
+		if statusCode != 200 {
+			fmt.Printf("Unable to connect to server '%s'...\n", rdClient.BaseUrl)
+			fmt.Printf("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
+			os.Exit(1)
+		}
+		jobStatus := getjobStatus(resData)
+		fmt.Println("> Deployment status: " + jobStatus)
+		if jobStatus == "DEPLOYING" || jobStatus == "QUEUED" || jobStatus == "STARTING" || jobStatus == "EXECUTING" {
+			fmt.Println("  Deployment running, next check in 5 seconds...")
+			timeToSleep = 5 * time.Second
+		} else if jobStatus == "REQUESTED" || jobStatus == "REQUESTED_SCHEDULED" {
+			fmt.Println("  Deployment in a REQUESTED state. Approval may be required in RapidDeploy to continue with the execution, next check in 30 seconds...")
+			timeToSleep = 30 * time.Second
+		} else if jobStatus == "SCHEDULED" {
+			fmt.Println("  Deployment in a SCHEDULED state, the execution will start in a future date, next check in 5 minutes...")
+			fmt.Println("  > Printing out deployment details: ")
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetAutoMergeCells(true)
+			for _, message := range getDeploymentMessages(resData) {
+				table.Append([]string{message.Span[0], message.Span[1]})
+			}
+			table.Render()
+			timeToSleep = 300 * time.Second
+		} else {
+			jobRunning = false
+			logFilename = getLogFilename(resData)
+			fmt.Println("Deployment finished with status: " + jobStatus)
+			if jobStatus != "FAILED" && jobStatus != "REJECTED" && jobStatus != "CANCELLED" && jobStatus != "UNEXECUTABLE" && jobStatus != "TIMEDOUT" && jobStatus != "UNKNOWN" {
+				fmt.Printf("Project '%s' successfully deployed!\n", projectName)
+			}
+		}
+	}
+	if logFilename != "" && logfile {
+		logFilePath, err := filepath.Abs(logFilename)
+		if err != nil {
+			fmt.Printf("%v\n\n", err)
+			os.Exit(1)
+		}
+		resData, statusCode, err := rdClient.call("GET", "deployment/showlog/job/"+jobId, nil, "text/xml")
+		if err != nil {
+			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
+			fmt.Printf("%v\n\n", err.Error())
+			os.Exit(1)
+		}
+		if statusCode != 200 {
+			fmt.Printf("Unable to connect to server '%s'...\n", rdClient.BaseUrl)
+			fmt.Printf("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
+			os.Exit(1)
+		}
+		err = os.WriteFile(logFilePath, resData, 0644)
+		if err != nil {
+			fmt.Println("Unable to create file:", logFilePath)
+			fmt.Printf("%v\n\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Log file available at '%s'\n", logFilePath)
+	}
+}
+
+func getDeploymentMessages(htmlContent []byte) []*Li {
+	htmlObject := new(Html)
+	err := xml.Unmarshal(htmlContent, &htmlObject)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return htmlObject.Body.Div[1].Div[0].Ul.Li
+}
+
+func getjobStatus(htmlContent []byte) string {
+	for _, message := range getDeploymentMessages(htmlContent) {
+		if strings.Contains(message.Span[0], "Job Status") {
+			return message.Span[1]
+		}
+	}
+	return ""
+}
+
+func getJobId(htmlContent []byte) string {
+	for _, message := range getDeploymentMessages(htmlContent) {
+		if strings.Contains(message.Span[0], "Job ID") {
+			return message.Span[1]
+		}
+	}
+	return ""
+}
+
+func getLogFilename(htmlContent []byte) string {
+	for _, message := range getDeploymentMessages(htmlContent) {
+		if strings.Contains(message.Span[0], "File Path") {
+			return filepath.Base(message.Span[1])
+		}
+	}
+	return ""
 }
