@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 )
 
@@ -18,7 +19,6 @@ var listTargetsCmd = &cobra.Command{
 	Short: "Lists the available targets for a project in RapidDeploy.",
 	Long:  `Lists the available targets for a project in RapidDeploy.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
 		// Check the correct number of arguments
 		if len(args) != 1 {
 			cmd.Usage()
@@ -29,29 +29,19 @@ var listTargetsCmd = &cobra.Command{
 
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("GET", "project/"+projectName+"/list", nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 && statusCode != 400 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodGet, "project/"+projectName+"/list", nil, "text/xml", false)
 
 		// Initialize the object that will contain the unmarshalled XML response
 		rdTargets := new(Html)
 		// Unmarshall the XML response
-		err = xml.Unmarshal(resData, &rdTargets)
+		err := xml.Unmarshal(resData, &rdTargets)
 		if err != nil {
-			fmt.Println(err)
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
@@ -64,6 +54,7 @@ var listTargetsCmd = &cobra.Command{
 				table.Append([]string{target.Span[1]})
 			}
 		}
+		fmt.Println()
 		table.Render()
 		fmt.Println()
 	},

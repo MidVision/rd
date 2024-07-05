@@ -44,7 +44,7 @@ func decodeToken(tokenStr string) (string, string, error) {
 func getHome() string {
 	home, err := homedir.Dir()
 	if err != nil {
-		fmt.Println(err)
+		printStdError("\n%v\n\n", err)
 		os.Exit(1)
 	}
 	return home
@@ -74,6 +74,9 @@ func call(method string, reqUrlStr string, bodyContent []byte, header map[string
 	// Create the HTTP request
 	req, err := http.NewRequest(method, reqUrl.String(), bytes.NewBuffer(bodyContent))
 	if err != nil {
+		if debug {
+			fmt.Printf("[ERROR] HTTP New Request: %v\n", err)
+		}
 		return nil, -1, err
 	}
 
@@ -122,4 +125,8 @@ func call(method string, reqUrlStr string, bodyContent []byte, header map[string
 	res.Body.Close()
 
 	return resData, res.StatusCode, nil
+}
+
+func printStdError(format string, a ...any) (n int, err error) {
+	return fmt.Fprintf(os.Stderr, format, a...)
 }

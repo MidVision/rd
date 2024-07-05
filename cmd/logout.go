@@ -17,19 +17,20 @@ var logoutCmd = &cobra.Command{
 
 It performs a logout from the RapidDeploy server.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
+		if quiet {
+			os.Stdout = nil
+		}
+
 		// Remove the login session file - log out
 		w := new(tabwriter.Writer)
 		w.Init(os.Stdout, 0, 8, 1, '*', 0)
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\t\t\n")
+		fmt.Fprintf(w, "\n\t\t\n")
 		if err := rdClient.removeLoginFile(); err != nil {
 			fmt.Fprintf(w, "\t WARNING: No login session found. Please, perform a login before requesting any action. \t\n")
 		} else {
 			fmt.Fprintf(w, "\t Successfully logged out from RapidDeploy. \t\n")
 		}
-		fmt.Fprintf(w, "\t\t\n")
-		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t\t\n\n")
 		w.Flush()
 	},
 }

@@ -18,7 +18,6 @@ var importCmd = &cobra.Command{
 	Short: "Imports a project into RapidDeploy.",
 	Long:  `This command imports a project into RapidDeploy. You need to provide the absolute, or relative to current directory, path to the project ZIP file.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
 		// Check the correct number of arguments
 		if len(args) != 1 {
 			cmd.Usage()
@@ -29,20 +28,24 @@ var importCmd = &cobra.Command{
 
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
 		// Prepare the body of the request
 		fileArray, err := ioutil.ReadFile(importProjectPath)
+		if err != nil {
+			printStdError("\n%v\n\n", err)
+			os.Exit(1)
+		}
 
 		if debug {
 			fmt.Printf("[DEBUG] Importing project file: %v\n", importProjectPath)
 		}
 
 		/*************** Import the project archive ***************/
+		fmt.Println()
 		resData, statusCode, err := rdClient.call(http.MethodPut, "project/import", fileArray, "application/zip")
-
 		if statusCode == 200 {
 			fmt.Println("File '" + importProjectPath + "' imported successfuly.")
 		} else if statusCode == 400 {
@@ -51,7 +54,7 @@ var importCmd = &cobra.Command{
 			// Unmarshall the XML response
 			err = xml.Unmarshal(resData, &htmlResponse)
 			if err != nil {
-				fmt.Println(err)
+				printStdError("\n%v\n\n", err)
 				os.Exit(1)
 			}
 			if len(htmlResponse.Body.Div[1].Div[0].Ul.Li) != 0 {

@@ -19,6 +19,7 @@ const (
 	awsTokenUrl   = "http://169.254.169.254/latest/api/token"
 	instanceIdUrl = "http://169.254.169.254/latest/meta-data/instance-id"
 	machineIdFile = "/etc/machine-id"
+	defaultRdUser = "mvadmin"
 	defaultRdPass = "mvadmin"
 )
 
@@ -39,11 +40,12 @@ session active for future commands to the RapidDeploy server.
 This session can be finished by calling the 'logout' command or by
 calling this command again.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
+		if quiet {
+			os.Stdout = nil
+		}
 
 		loginResult := false
-
-		if password == "" {
+		if password == "" && username == defaultRdUser {
 			if debug {
 				fmt.Printf("[DEBUG] Loging in with default AWS password...\n")
 			}
@@ -63,7 +65,7 @@ calling this command again.`,
 			if debug {
 				fmt.Printf("[DEBUG] AWS instance ID = %v\n", string(instanceId))
 			}
-			loginResult, _ = checkLogin(rdUrl, username, string(instanceId))
+			loginResult = checkLogin(rdUrl, username, string(instanceId))
 
 			if !loginResult {
 				// Get default Azure password and try second login
@@ -72,7 +74,7 @@ calling this command again.`,
 					fmt.Printf("[DEBUG] Loging in with default Azure password...\n")
 					fmt.Printf("[DEBUG] Azure machine ID = %v\n", string(machineId))
 				}
-				loginResult, _ = checkLogin(rdUrl, username, string(machineId))
+				loginResult = checkLogin(rdUrl, username, string(machineId))
 			}
 
 			if !loginResult {
@@ -80,31 +82,29 @@ calling this command again.`,
 				if debug {
 					fmt.Printf("[DEBUG] Loging in with default RapidDeploy password...\n")
 				}
-				loginResult, _ = checkLogin(rdUrl, username, defaultRdPass)
+				loginResult = checkLogin(rdUrl, username, defaultRdPass)
 			}
 		} else {
-			loginResult, _ = checkLogin(rdUrl, username, password)
+			loginResult = checkLogin(rdUrl, username, password)
 		}
 
 		if !loginResult {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdUrl)
-			fmt.Printf("Please check the credentials.\n\n")
+			printStdError("\nUnable to connect to server '%s'.\n", rdUrl)
+			printStdError("Please check the credentials.\n\n")
 			os.Exit(1)
 		}
 
-		// Print table of successful login
+		// Print successful login
 		w := new(tabwriter.Writer)
 		w.Init(os.Stdout, 0, 8, 1, '*', 0)
-		fmt.Fprintf(w, "\t\t\n")
+		fmt.Fprintf(w, "\n\t\t\n")
 		fmt.Fprintf(w, "\t Successfully logged in to '%s' \t\n", rdUrl)
-		fmt.Fprintf(w, "\t\t\n")
-		fmt.Fprintln(w)
+		fmt.Fprintf(w, "\t\t\n\n")
 		w.Flush()
 
 		// Save the rdClient struct into the login session file for future calls to RapidDeploy
 		if err := rdClient.saveLoginFile(); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			printStdError("\n%v\n\n", err)
 		}
 	},
 }
@@ -119,11 +119,13 @@ func init() {
 	loginCmd.Flags().StringVarP(&password, "password", "", "", "Password used to connect to the RapidDeploy server.")
 }
 
-func checkLogin(loginUrl, loginUser, loginPass string) (bool, error) {
+func checkLogin(loginUrl, loginUser, loginPass string) bool {
 	parsedUrl, err := url.Parse(loginUrl)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		if debug {
+			fmt.Printf("[ERROR] Parse URL: %v\n", err)
+		}
+		return false
 	}
 
 	// Initialize the rdClient
@@ -139,35 +141,46 @@ func checkLogin(loginUrl, loginUser, loginPass string) (bool, error) {
 		if debug {
 			fmt.Printf("[ERROR] Marshal rdClient: %v\n", err)
 		}
-		return false, err
+		return false
 	}
-	resData, statusCode, err := rdClient.call(http.MethodPost, "user/create/token", reqData, "text/plain")
+	resData, _, _ := rdClient.call(http.MethodPost, "user/create/token", reqData, "text/plain")
 	rdClient.AuthToken = string(resData)
 
 	if debug {
-		fmt.Printf("[DEBUG] Trying to log in to '%s'...\n", loginUrl)
+		fmt.Printf("[DEBUG] Trying to log in to '%s'...\n", rdClient.BaseUrl)
+		fmt.Printf("[DEBUG] Authentication token = %v\n", rdClient.AuthToken)
 	}
 
 	// Perform a ramdom call to see the URL and authentication token are correct
 	// FIXME: to check connection use 'listGroups' until we create a generic web service call!
-	_, statusCode, err = rdClient.call("GET", "group/list", nil, "text/xml")
+	reqUrl, err := rdClient.BaseUrl.Parse(rdClient.BaseUrl.EscapedPath() + "/ws/group/list")
+	if err != nil {
+		if debug {
+			fmt.Printf("[ERROR] Parse URL: %v\n", err)
+		}
+		return false
+	}
+	header := make(map[string]string)
+	header["Content-Type"] = "text/xml"
+	header["Authorization"] = rdClient.AuthToken
+	_, statusCode, err := call(http.MethodGet, reqUrl.String(), nil, header)
 
 	// Login failed - the call throws an error
 	if err != nil {
 		if debug {
-			fmt.Printf("[DEBUG] Unable to connect to server '%s': %s\n", parsedUrl, err)
+			fmt.Printf("[DEBUG] Unable to connect to server '%s'.\n", parsedUrl)
+			fmt.Printf("[DEBUG] %v\n", err)
 		}
-		return false, err
+		return false
 	}
 
 	// Login failed - the call returns a failure status code
 	if statusCode != 200 {
 		if debug {
-			fmt.Printf("[DEBUG] Unable to connect to server '%s'...\n", parsedUrl)
-			fmt.Printf("[DEBUG] Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
+			fmt.Printf("[DEBUG] Unable to connect to server '%s'.\n", parsedUrl)
+			fmt.Printf("[DEBUG] Server returned response code %v: %v\n", statusCode, http.StatusText(statusCode))
 		}
-		return false, nil
+		return false
 	}
-	return true, nil
-
+	return true
 }

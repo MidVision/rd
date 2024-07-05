@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +26,9 @@ var startJobPlanCmd = &cobra.Command{
 In order to provide a job plan ID you previously
 may need to run the 'listJobPlans' command.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
+		if quiet {
+			os.Stdout = nil
+		}
 		// Check the correct number of arguments
 		if len(args) == 1 {
 			jobPlanId = args[0]
@@ -35,35 +38,25 @@ may need to run the 'listJobPlans' command.`,
 		}
 
 		if _, err := strconv.Atoi(jobPlanId); err != nil {
-			fmt.Println("Invalid job plan ID provided, it must be a numeric value.\n")
+			printStdError("\nInvalid job plan ID provided, it must be a numeric value.\n\n")
 			os.Exit(1)
 		}
 
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("PUT", "deployment/jobPlan/run/"+jobPlanId, nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 && statusCode != 400 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodPut, "deployment/jobPlan/run/"+jobPlanId, nil, "text/xml", false)
 
 		// Initialize the object that will contain the unmarshalled XML response
 		rdDeploy := new(Html)
 		// Unmarshall the XML response
-		err = xml.Unmarshal(resData, &rdDeploy)
+		err := xml.Unmarshal(resData, &rdDeploy)
 		if err != nil {
-			fmt.Println(err)
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
@@ -77,6 +70,7 @@ may need to run the 'listJobPlans' command.`,
 				table.Append([]string{message.Span[0], replacedTitle})
 			}
 		}
+		fmt.Println()
 		table.Render()
 		fmt.Println()
 	},

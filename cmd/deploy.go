@@ -33,8 +33,9 @@ var deployCmd = &cobra.Command{
 If no package name is specified the latest version
 is used by default.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
-
+		if quiet {
+			os.Stdout = nil
+		}
 		// Check the arguments are properly provided
 		resParse, dictionaryArguments := parseArguments(args)
 		if !resParse {
@@ -48,10 +49,10 @@ is used by default.`,
 
 		targetStrip := strings.Split(targetName, ".")
 		if len(targetStrip) != 3 {
-			fmt.Println("Invalid target name '" + targetName + "'")
-			fmt.Println("The target name has to include the server, the")
-			fmt.Println("installation and the configuration names:")
-			fmt.Println("    e.g. SERVER.INSTALLATION.CONFIGURATION\n")
+			printStdError("\nInvalid target name '%s'.\n", targetName)
+			printStdError("The target name has to include the server, the ")
+			printStdError("installation and the configuration names:\n")
+			printStdError("e.g. SERVER.INSTALLATION.CONFIGURATION\n\n")
 			os.Exit(1)
 		}
 		serverName := targetStrip[0]
@@ -60,7 +61,7 @@ is used by default.`,
 
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
@@ -72,17 +73,7 @@ is used by default.`,
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("PUT", urlBuffer.String(), nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 && statusCode != 400 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodPut, urlBuffer.String(), nil, "text/xml", false)
 
 		// Print deployment information in a table
 		printTable := true
@@ -97,23 +88,24 @@ is used by default.`,
 				table.Append([]string{replacedTitle, message.Span[1]})
 			}
 		}
+
 		if printTable {
+			fmt.Println()
 			table.Render()
+			fmt.Println()
 		} else {
-			fmt.Println("Invalid target name '" + targetName + "'")
-			fmt.Println("Please check the server and the installation names.\n")
+			printStdError("\nInvalid target name '%s'.\n", targetName)
+			printStdError("Please check the server and the installation names.\n\n")
 			os.Exit(1)
 		}
 
 		// Deploying project synchronously
 		if synchronous {
-			fmt.Println()
 			fmt.Println("Deploying project in synchronous mode...")
 			jobId := getJobId(resData)
 			checkSynchronousDeploy(jobId)
+			fmt.Println()
 		}
-
-		fmt.Println()
 	},
 }
 
@@ -190,17 +182,7 @@ func checkSynchronousDeploy(jobId string) {
 	jobRunning := true
 	for jobRunning {
 		time.Sleep(timeToSleep)
-		resData, statusCode, err := rdClient.call("GET", "deployment/display/job/"+jobId, nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'...\n", rdClient.BaseUrl)
-			fmt.Printf("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodGet, "deployment/display/job/"+jobId, nil, "text/xml")
 		jobStatus := getjobStatus(resData)
 		fmt.Println("> Deployment status: " + jobStatus)
 		if jobStatus == "DEPLOYING" || jobStatus == "QUEUED" || jobStatus == "STARTING" || jobStatus == "EXECUTING" {
@@ -232,24 +214,14 @@ func checkSynchronousDeploy(jobId string) {
 	if logFilename != "" && logfile {
 		logFilePath, err := filepath.Abs(logFilename)
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("%v\n\n", err)
 			os.Exit(1)
 		}
-		resData, statusCode, err := rdClient.call("GET", "deployment/showlog/job/"+jobId, nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'...\n", rdClient.BaseUrl)
-			fmt.Printf("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodGet, "deployment/showlog/job/"+jobId, nil, "text/xml")
 		err = os.WriteFile(logFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", logFilePath)
-			fmt.Printf("%v\n\n", err)
+			printStdError("\nUnable to create file: %s\n", logFilePath)
+			printStdError("%v\n\n", err)
 			os.Exit(1)
 		}
 		fmt.Printf("Log file available at '%s'\n", logFilePath)
@@ -260,7 +232,7 @@ func getDeploymentMessages(htmlContent []byte) []*Li {
 	htmlObject := new(Html)
 	err := xml.Unmarshal(htmlContent, &htmlObject)
 	if err != nil {
-		fmt.Println(err)
+		printStdError("\n%v\n\n", err)
 		os.Exit(1)
 	}
 	return htmlObject.Body.Div[1].Div[0].Ul.Li

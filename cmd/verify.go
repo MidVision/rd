@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,92 +30,54 @@ logs of the server in a ZIP file for further investigation.`,
 	//The -mvcloud option retrieves also information about the
 	//MidVision Cloud product installed along with RapidDeploy.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if quiet {
+			os.Stdout = nil
+		}
 		retcode := 0
 		defer func() {
 			os.Exit(retcode)
 		}()
-		fmt.Println()
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
-			retcode = 1
-			return
+			printStdError("\n%v\n\n", err)
+			os.Exit(1)
 		}
 
 		/*************** Retrieve system info ***************/
-		resData, statusCode, err := rdClient.call("GET", "system/general-info", nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			retcode = 1
-			return
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			retcode = 1
-			return
-		}
+		resData, _, _ := rdClient.call(http.MethodGet, "system/general-info", nil, "text/xml")
 		systemInfoFilePath := filepath.Join(os.TempDir(), systemInfoFilename)
-		err = os.WriteFile(systemInfoFilePath, resData, 0644)
+		err := os.WriteFile(systemInfoFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", systemInfoFilePath)
-			fmt.Printf("%v\n\n", err)
-			retcode = 1
-			return
+			printStdError("\nUnable to create file: %s\n", systemInfoFilePath)
+			printStdError("%v\n\n", err)
+			os.Exit(1)
 		}
 
 		/*************** Retrive properties ***************/
-		resData, statusCode, err = rdClient.call("GET", "system/configuration", nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			retcode = 1
-			return
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			retcode = 1
-			return
-		}
+		resData, _, _ = rdClient.call(http.MethodGet, "system/configuration", nil, "text/xml")
 		propertiesFilePath := filepath.Join(os.TempDir(), propertiesFilename)
 		err = os.WriteFile(propertiesFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", propertiesFilePath)
-			fmt.Printf("%v\n\n", err)
-			retcode = 1
-			return
+			printStdError("\nUnable to create file: %s\n", propertiesFilePath)
+			printStdError("%v\n\n", err)
+			os.Exit(1)
 		}
 
 		/*************** Retrieve application logs ***************/
-		resData, statusCode, err = rdClient.call("GET", "system/application-logs", nil, "application/zip")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			retcode = 1
-			return
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			retcode = 1
-			return
-		}
+		resData, _, _ = rdClient.call(http.MethodGet, "system/application-logs", nil, "application/zip")
 		logsFilePath := filepath.Join(os.TempDir(), logsFilename)
 		err = os.WriteFile(logsFilePath, resData, 0644)
 		if err != nil {
-			fmt.Println("Unable to create file:", logsFilePath)
-			fmt.Printf("%v\n\n", err)
-			retcode = 1
-			return
+			printStdError("\nUnable to create file: %s\n", logsFilePath)
+			printStdError("%v\n\n", err)
+			os.Exit(1)
 		}
 
 		/*************** Create ZIP file ***************/
 		archiveName := getDatedFilename("rd-info", "zip")
 		archiveAbsPath, err := filepath.Abs(archiveName)
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -124,7 +87,7 @@ logs of the server in a ZIP file for further investigation.`,
 		archive, err := os.Create(archiveName)
 		defer archive.Close()
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -135,7 +98,7 @@ logs of the server in a ZIP file for further investigation.`,
 		sysInfoFile, err := os.Open(systemInfoFilePath)
 		defer sysInfoFile.Close()
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -144,12 +107,12 @@ logs of the server in a ZIP file for further investigation.`,
 		}
 		sysInfoZipWriter, err := archiveWriter.Create(systemInfoFilename)
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
 		if _, err := io.Copy(sysInfoZipWriter, sysInfoFile); err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -162,7 +125,7 @@ logs of the server in a ZIP file for further investigation.`,
 		propsFile, err := os.Open(propertiesFilePath)
 		defer propsFile.Close()
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -171,12 +134,12 @@ logs of the server in a ZIP file for further investigation.`,
 		}
 		propsZipWriter, err := archiveWriter.Create(propertiesFilename)
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
 		if _, err := io.Copy(propsZipWriter, propsFile); err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -189,7 +152,7 @@ logs of the server in a ZIP file for further investigation.`,
 		zipReader, err := zip.OpenReader(logsFilePath)
 		defer zipReader.Close()
 		if err != nil {
-			fmt.Printf("%v\n\n", err)
+			printStdError("\n%v\n\n", err)
 			retcode = 1
 			return
 		}
@@ -203,13 +166,13 @@ logs of the server in a ZIP file for further investigation.`,
 			zipItemReader, err := zipItem.Open()
 			defer zipItemReader.Close()
 			if err != nil {
-				fmt.Printf("%v\n\n", err)
+				printStdError("\n%v\n\n", err)
 				retcode = 1
 				return
 			}
 			header, err := zip.FileInfoHeader(zipItem.FileInfo())
 			if err != nil {
-				fmt.Printf("%v\n\n", err)
+				printStdError("\n%v\n\n", err)
 				retcode = 1
 				return
 			}
@@ -217,13 +180,13 @@ logs of the server in a ZIP file for further investigation.`,
 			header.Method = zip.Deflate
 			targetItem, err := archiveWriter.CreateHeader(header)
 			if err != nil {
-				fmt.Printf("%v\n\n", err)
+				printStdError("\n%v\n\n", err)
 				retcode = 1
 				return
 			}
 			_, err = io.Copy(targetItem, zipItemReader)
 			if err != nil {
-				fmt.Printf("%v\n\n", err)
+				printStdError("\n%v\n\n", err)
 				retcode = 1
 				return
 			}
@@ -234,6 +197,7 @@ logs of the server in a ZIP file for further investigation.`,
 		os.Remove(logsFilePath)
 
 		// Show resulting ZIP file
+		fmt.Println()
 		fmt.Println("RapidDeploy information file: " + archiveAbsPath)
 		fmt.Println()
 	},

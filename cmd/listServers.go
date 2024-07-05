@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -44,32 +45,21 @@ var listServersCmd = &cobra.Command{
 	Short: "Lists the available servers in RapidDeploy.",
 	Long:  `Lists the available servers in RapidDeploy.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
 		// Load the login session file - initialize the rdClient struct
 		if err := rdClient.loadLoginFile(); err != nil {
-			fmt.Println(err.Error())
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
 		// Perform the REST call to get the data
-		resData, statusCode, err := rdClient.call("GET", "server/list", nil, "text/xml")
-		if err != nil {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("%v\n\n", err.Error())
-			os.Exit(1)
-		}
-		if statusCode != 200 {
-			fmt.Printf("Unable to connect to server '%s'.\n", rdClient.BaseUrl)
-			fmt.Printf("Please, perform a new login before requesting any action.\n\n")
-			os.Exit(1)
-		}
+		resData, _, _ := rdClient.call(http.MethodGet, "server/list", nil, "text/xml")
 
 		// Initialize the object that will contain the unmarshalled XML response
 		rdServers := new(Servers)
 		// Unmarshall the XML response
-		err = xml.Unmarshal(resData, &rdServers)
+		err := xml.Unmarshal(resData, &rdServers)
 		if err != nil {
-			fmt.Println(err)
+			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
 
@@ -85,6 +75,7 @@ var listServersCmd = &cobra.Command{
 		} else {
 			table.Append([]string{"No servers available to show"})
 		}
+		fmt.Println()
 		table.Render()
 		fmt.Println()
 	},

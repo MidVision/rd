@@ -1,6 +1,6 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
-// TODO: implement a silent mode.
+// TODO: unify all error and standard messages with constants.
 
 package cmd
 
@@ -15,14 +15,14 @@ import (
 var rdClient *RDClient = &RDClient{}
 
 // For debugging purposes
-var debug bool = false
+var debug, quiet bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:     "rd",
 	Short:   "Command line interface for the RapidDeploy tool.",
 	Long:    `RapidDeploy CLI - Command line interface for the RapidDeploy tool.`,
-	Version: "1.3",
+	Version: "1.4",
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -36,4 +36,5 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Shows debugging information.")
+	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Executes in quiet mode. Does not show any output.")
 }

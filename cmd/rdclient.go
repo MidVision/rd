@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -70,20 +71,16 @@ func (rdc *RDClient) loadLoginFile() error {
 	loginFilePath := path.Join(getHome(), loginFile)
 
 	if _, err := os.Stat(loginFilePath); err != nil {
-		return fmt.Errorf("No login session found!\nPlease, perform a login before requesting any action.\n")
+		return fmt.Errorf("No login session found!\nPlease, perform a login before requesting any action.")
 	}
 
 	content, err := ioutil.ReadFile(loginFilePath)
 	if err != nil {
-		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.\n")
+		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.")
 	}
 
 	if err := json.Unmarshal(content, rdc); err != nil {
-		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.\n")
-	} else {
-		if err != nil {
-			return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.\n")
-		}
+		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.")
 	}
 	return nil
 }
@@ -104,14 +101,18 @@ func (rdc *RDClient) removeLoginFile() error {
 	return os.Remove(loginFilePath)
 }
 
-func (rdc *RDClient) call(method string, relUrl string, bodyContent []byte, contentType string) ([]byte, int, error) {
+func (rdc *RDClient) call(method string, relUrl string, bodyContent []byte, contentType string, check400Arg ...bool) (resData []byte, statusCode int, err error) {
+	check400 := true
+	if len(check400Arg) > 0 {
+		check400 = check400Arg[0]
+	}
 
 	if rdc.BaseUrl == nil {
-		return nil, -1, fmt.Errorf("No URL found in login session.\nPlease, perform a new login before requesting any action.\n")
+		return nil, -1, fmt.Errorf("No URL found in login session.\nPlease, perform a new login before requesting any action.")
 	}
 
 	if rdc.AuthToken == "" {
-		return nil, -1, fmt.Errorf("No authentication token found in login session.\nPlease, perform a new login before requesting any action.\n")
+		return nil, -1, fmt.Errorf("No authentication token found in login session.\nPlease, perform a new login before requesting any action.")
 	}
 
 	// Resolve the absolute URL for the request
@@ -133,5 +134,19 @@ func (rdc *RDClient) call(method string, relUrl string, bodyContent []byte, cont
 		fmt.Printf("[DEBUG] Authentication token = %v\n", rdc.AuthToken)
 	}
 
-	return call(method, reqUrl.String(), bodyContent, header)
+	resData, statusCode, err = call(method, reqUrl.String(), bodyContent, header)
+	if err != nil {
+		printStdError("\nUnable to connect to server '%s'.\n", rdc.BaseUrl)
+		printStdError("%v\n\n", err)
+		os.Exit(1)
+	}
+	if (statusCode != 200 && statusCode != 400) || (statusCode == 400 && check400) {
+		printStdError("\nUnable to connect to server '%s'.\n", rdc.BaseUrl)
+		printStdError("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
+		if statusCode == 401 {
+			printStdError("Please, perform a new login before requesting any action.\n\n")
+		}
+		os.Exit(1)
+	}
+	return
 }
