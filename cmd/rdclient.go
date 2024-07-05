@@ -136,12 +136,12 @@ func (rdc *RDClient) call(method string, relUrl string, bodyContent []byte, cont
 
 	resData, statusCode, err = call(method, reqUrl.String(), bodyContent, header)
 	if err != nil {
-		printStdError("\nUnable to connect to server '%s'.\n", rdc.BaseUrl)
+		printStdError("\nUnable to connect to server '%s'\n", rdc.BaseUrl)
 		printStdError("%v\n\n", err)
 		os.Exit(1)
 	}
 	if (statusCode != 200 && statusCode != 400) || (statusCode == 400 && check400) {
-		printStdError("\nUnable to connect to server '%s'.\n", rdc.BaseUrl)
+		printStdError("\nUnable to connect to server '%s'\n", rdc.BaseUrl)
 		printStdError("Server returned response code %v: %v\n\n", statusCode, http.StatusText(statusCode))
 		if statusCode == 401 {
 			printStdError("Please, perform a new login before requesting any action.\n\n")

@@ -36,5 +36,5 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Shows debugging information.")
-	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Executes in quiet mode. Does not show any output.")
+	RootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Executes in quiet mode. Only shows error messages.")
 }

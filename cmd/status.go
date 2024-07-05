@@ -5,9 +5,9 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 	"text/tabwriter"
-	"net/http"
 )
 
 // statusCmd represents the status command
@@ -17,12 +17,15 @@ var statusCmd = &cobra.Command{
 	Long: `Checks if a login session is established to
 a RapidDeploy server and shows the server URL.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if quiet {
+			os.Stdout = nil
+		}
 		// Load the login session file
 		if err := rdClient.loadLoginFile(); err != nil {
 			printStdError("\n%v\n\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Check connection to the server
 		// FIXME: to check connection use 'listGroups' until we create a generic web service call!
 		rdClient.call(http.MethodGet, "group/list", nil, "text/plain")

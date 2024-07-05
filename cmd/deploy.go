@@ -49,7 +49,7 @@ is used by default.`,
 
 		targetStrip := strings.Split(targetName, ".")
 		if len(targetStrip) != 3 {
-			printStdError("\nInvalid target name '%s'.\n", targetName)
+			printStdError("\nInvalid target name '%s'\n", targetName)
 			printStdError("The target name has to include the server, the ")
 			printStdError("installation and the configuration names:\n")
 			printStdError("e.g. SERVER.INSTALLATION.CONFIGURATION\n\n")
@@ -94,7 +94,7 @@ is used by default.`,
 			table.Render()
 			fmt.Println()
 		} else {
-			printStdError("\nInvalid target name '%s'.\n", targetName)
+			printStdError("\nInvalid target name '%s'\n", targetName)
 			printStdError("Please check the server and the installation names.\n\n")
 			os.Exit(1)
 		}

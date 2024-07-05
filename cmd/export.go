@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 var exportProjectName string
@@ -18,6 +19,9 @@ var exportCmd = &cobra.Command{
 	Short: "Exports a project from RapidDeploy.",
 	Long:  `This command exports a project from RapidDeploy into the current directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if quiet {
+			os.Stdout = nil
+		}
 		// Check the correct number of arguments
 		if len(args) != 1 {
 			cmd.Usage()
@@ -33,21 +37,27 @@ var exportCmd = &cobra.Command{
 		}
 
 		/*************** Retrieve the project archive ***************/
-		resData, statusCode, err := rdClient.call(http.MethodGet, "project/"+exportProjectName+"/export", nil, "application/zip")
+		resData, statusCode, _ := rdClient.call(http.MethodGet, "project/"+exportProjectName+"/export", nil, "application/zip", false)
 		if statusCode == 400 {
-			fmt.Printf("Invalid project name: %s\n\n", exportProjectName)
+			printStdError("\nInvalid project name: %s\n\n", exportProjectName)
 			os.Exit(1)
 		}
-		err = os.WriteFile(exportProjectName+".zip", resData, 0644)
+		exportProjectFile := exportProjectName + ".zip"
+		exportProjectAbsPath, err := filepath.Abs(exportProjectFile)
 		if err != nil {
-			printStdError("\nUnable to create file: %s.zip\n", exportProjectName)
+			printStdError("\n%v\n\n", err)
+			os.Exit(1)
+		}
+		err = os.WriteFile(exportProjectAbsPath, resData, 0644)
+		if err != nil {
+			printStdError("\nUnable to create file: %s\n", exportProjectAbsPath)
 			printStdError("%v\n\n", err)
 			os.Exit(1)
 		}
 
 		// Show resulting ZIP file
 		fmt.Println()
-		fmt.Println("Project export file: " + exportProjectName + ".zip")
+		fmt.Println("Project export file: " + exportProjectAbsPath)
 		fmt.Println()
 	},
 }

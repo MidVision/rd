@@ -89,7 +89,7 @@ calling this command again.`,
 		}
 
 		if !loginResult {
-			printStdError("\nUnable to connect to server '%s'.\n", rdUrl)
+			printStdError("\nUnable to connect to server '%s'\n", rdUrl)
 			printStdError("Please check the credentials.\n\n")
 			os.Exit(1)
 		}
@@ -168,7 +168,7 @@ func checkLogin(loginUrl, loginUser, loginPass string) bool {
 	// Login failed - the call throws an error
 	if err != nil {
 		if debug {
-			fmt.Printf("[DEBUG] Unable to connect to server '%s'.\n", parsedUrl)
+			fmt.Printf("[DEBUG] Unable to connect to server '%s'\n", parsedUrl)
 			fmt.Printf("[DEBUG] %v\n", err)
 		}
 		return false
@@ -177,7 +177,7 @@ func checkLogin(loginUrl, loginUser, loginPass string) bool {
 	// Login failed - the call returns a failure status code
 	if statusCode != 200 {
 		if debug {
-			fmt.Printf("[DEBUG] Unable to connect to server '%s'.\n", parsedUrl)
+			fmt.Printf("[DEBUG] Unable to connect to server '%s'\n", parsedUrl)
 			fmt.Printf("[DEBUG] Server returned response code %v: %v\n", statusCode, http.StatusText(statusCode))
 		}
 		return false
