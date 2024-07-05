@@ -114,9 +114,9 @@ func init() {
 	RootCmd.AddCommand(loginCmd)
 
 	// The flags defined for this command
-	loginCmd.Flags().StringVarP(&rdUrl, "url", "", "http://localhost:9090/MidVision", "URL used to connect to the RapidDeploy server.")
-	loginCmd.Flags().StringVarP(&username, "username", "", "mvadmin", "Username used to connect to the RapidDeploy server.")
-	loginCmd.Flags().StringVarP(&password, "password", "", "", "Password used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVar(&rdUrl, "url", "http://localhost:9090/MidVision", "URL used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVar(&username, "username", "mvadmin", "Username used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVar(&password, "password", "", "Password used to connect to the RapidDeploy server.")
 }
 
 func checkLogin(loginUrl, loginUser, loginPass string) bool {

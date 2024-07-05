@@ -1,7 +1,5 @@
 // Copyright © 2024 Rafael Ruiz Palacios <support@midvision.com>
 
-// TODO: provide output path as a flag.
-
 package cmd
 
 import (
@@ -21,14 +19,13 @@ const (
 	logsFilename       = "logs.zip"
 )
 
+var outputFile string
+
 var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verifies the RapidDeploy installation and retrieves useful information.",
 	Long: `Verifies the RapidDeploy installation and retrieves the system information, configuration and 
 logs of the server in a ZIP file for further investigation.`,
-	// TODO
-	//The -mvcloud option retrieves also information about the
-	//MidVision Cloud product installed along with RapidDeploy.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if quiet {
 			os.Stdout = nil
@@ -75,6 +72,9 @@ logs of the server in a ZIP file for further investigation.`,
 
 		/*************** Create ZIP file ***************/
 		archiveName := getDatedFilename("rd-info", "zip")
+		if outputFile != "" {
+			archiveName = outputFile
+		}
 		archiveAbsPath, err := filepath.Abs(archiveName)
 		if err != nil {
 			printStdError("\n%v\n\n", err)
@@ -205,6 +205,7 @@ logs of the server in a ZIP file for further investigation.`,
 
 func init() {
 	RootCmd.AddCommand(verifyCmd)
+	verifyCmd.Flags().StringVarP(&outputFile, "output", "o", "", "The absolute or relative to current directory path for the output information ZIP file.")
 }
 
 func getDatedFilename(prefix, extension string) string {
