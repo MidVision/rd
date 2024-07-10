@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -78,8 +79,12 @@ logs of the server in a ZIP file for further investigation.`,
 		archiveAbsPath, err := filepath.Abs(archiveName)
 		if err != nil {
 			printStdError("\n%v\n\n", err)
-			retcode = 1
-			return
+			os.Exit(1)
+		}
+		err = os.MkdirAll(path.Dir(archiveAbsPath), 0755)
+		if err != nil {
+			printStdError("\n%v\n\n", err)
+			os.Exit(1)
 		}
 		if debug {
 			fmt.Printf("[DEBUG] Creating ZIP archive: %v\n", archiveAbsPath)

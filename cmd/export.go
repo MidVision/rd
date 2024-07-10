@@ -1,6 +1,7 @@
 // Copyright © 2024 Rafael Ruiz Palacios <support@midvision.com>
 
 // TODO: provide output path as a flag.
+// TODO: create directories of the output flag recursively.
 
 package cmd
 
