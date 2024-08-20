@@ -1,6 +1,6 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
-// TODO: default to localhost target.
+// TODO: provide a properties file as data ditionary.
 // TODO: provide log file path as a flag.
 // FIXME: "Configuration Name" not being shown in deployment summary.
 
@@ -24,23 +24,31 @@ var synchronous, logfile bool
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
-	Use:   "deploy PROJECT_NAME [PACKAGE_NAME] TARGET_NAME [@@DICTIONARY_KEY@@=DICTIONARY_VALUE ...]",
-	Short: "Deploys a RapidDeploy project to a specified target.",
-	Long: `Deploys a specified version of a RapidDeploy project
-(deploymen package) to a specified project target
-(i.e. SERVER.INSTALLATION.CONFIGURATION).
+	Use:   "deploy PROJECT_NAME [TARGET_NAME] [@@DICTIONARY_KEY_1@@=DICTIONARY_VALUE_1 @@DICTIONARY_KEY_2@@=DICTIONARY_VALUE_2 ...]",
+	Short: "Deploys a RapidDeploy project to a specific target.",
+	Long: `Deploys a RapidDeploy project's deploymen package to a specific target (i.e. SERVER.INSTALLATION.CONFIGURATION).
 
-If no package name is specified the latest version
-is used by default.`,
+If no target name is specified the first one found with a 'localhost' hostname will be used.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if quiet {
 			os.Stdout = nil
 		}
+
 		// Check the arguments are properly provided
 		resParse, dictionaryArguments := parseArguments(args)
 		if !resParse {
 			cmd.Usage()
 			os.Exit(1)
+		}
+
+		// Load the login session file - initialize the rdClient struct
+		if err := rdClient.loadLoginFile(); err != nil {
+			printStdError("\n%v\n\n", err)
+			os.Exit(1)
+		}
+
+		if targetName == "" {
+			targetName = getDefaultTargetName(projectName)
 		}
 
 		if debug {
@@ -50,20 +58,13 @@ is used by default.`,
 		targetStrip := strings.Split(targetName, ".")
 		if len(targetStrip) != 3 {
 			printStdError("\nInvalid target name '%s'\n", targetName)
-			printStdError("The target name has to include the server, the ")
-			printStdError("installation and the configuration names:\n")
+			printStdError("The target name has to include the server, the installation and the configuration names:\n")
 			printStdError("e.g. SERVER.INSTALLATION.CONFIGURATION\n\n")
 			os.Exit(1)
 		}
 		serverName := targetStrip[0]
 		installName := targetStrip[1]
 		configName := targetStrip[2]
-
-		// Load the login session file - initialize the rdClient struct
-		if err := rdClient.loadLoginFile(); err != nil {
-			printStdError("\n%v\n\n", err)
-			os.Exit(1)
-		}
 
 		var urlBuffer bytes.Buffer
 		urlBuffer.WriteString("deployment/" + projectName + "/runjob/deploy/" + serverName + "/" + installName + "/" + configName +
@@ -72,32 +73,30 @@ is used by default.`,
 			urlBuffer.WriteString("&dictionaryItem=" + dictionaryArg)
 		}
 
-		// Perform the REST call to get the data
-		resData, _, _ := rdClient.call(http.MethodPut, urlBuffer.String(), nil, "text/xml", false)
+		resData, resCode, _ := rdClient.call(http.MethodPut, urlBuffer.String(), nil, "text/xml", false)
 
 		// Print deployment information in a table
-		printTable := true
-		table := tablewriter.NewWriter(os.Stdout)
+		var table *tablewriter.Table
+		if resCode == 200 {
+			table = tablewriter.NewWriter(os.Stdout)
+		} else {
+			table = tablewriter.NewWriter(os.Stderr)
+		}
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetAutoMergeCells(true)
-		for _, message := range getDeploymentMessages(resData) {
+		for _, message := range getResponseMessages(resData) {
 			if strings.Contains(message.Span[1], "No entity found") {
-				printTable = false
+				printStdError("\nInvalid target name '%s'\n", targetName)
+				printStdError("Please check the server and the installation names.\n\n")
+				os.Exit(1)
 			} else {
 				replacedTitle := strings.Replace(message.Span[0]+":", "Deployment Job ", "", -1)
 				table.Append([]string{replacedTitle, message.Span[1]})
 			}
 		}
-
-		if printTable {
-			fmt.Println()
-			table.Render()
-			fmt.Println()
-		} else {
-			printStdError("\nInvalid target name '%s'\n", targetName)
-			printStdError("Please check the server and the installation names.\n\n")
-			os.Exit(1)
-		}
+		fmt.Println()
+		table.Render()
+		fmt.Println()
 
 		// Deploying project synchronously
 		if synchronous {
@@ -113,15 +112,15 @@ func init() {
 	RootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&synchronous, "sync", "s", false, "Waits for the deployment to finish.")
 	deployCmd.Flags().BoolVarP(&logfile, "logfile", "l", false, "Retrieves the deployment log file. It must be used with the 'sync' option.")
+	deployCmd.Flags().StringVarP(&deployPackage, "package", "p", "", "The deployment package to deploy. It defaults to the latest version.")
 }
 
 // Returns a boolean value showing if the arguments were properly
 // provided and the section of the 'items' slice that contains
 // the elements that comply with a dictionary item argument syntax.
 func parseArguments(args []string) (bool, []string) {
-
 	// Not enough arguments
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return false, []string{}
 	}
 
@@ -132,31 +131,14 @@ func parseArguments(args []string) (bool, []string) {
 		projectName = args[0]
 	}
 
-	// The second argument must be the deployment package or target name
-	if isDictionaryArg(args[1]) {
-		return false, []string{}
-	} else {
-		targetName = args[1]
-	}
-
 	var dictionaryItems []string
-	if len(args) > 2 {
-
-		// The third argument must be the target name or the first dictionary item
-		if isDictionaryArg(args[2]) {
-			dictionaryItems = append(dictionaryItems, args[2])
+	for i := 1; i < len(args); i++ {
+		if isDictionaryArg(args[i]) {
+			dictionaryItems = append(dictionaryItems, args[i])
+		} else if len(dictionaryItems) == 0 && targetName == "" {
+			targetName = args[i]
 		} else {
-			deployPackage = args[1]
-			targetName = args[2]
-		}
-
-		// The rest of the arguments must be dictionary items
-		for i := 3; i < len(args); i++ {
-			if isDictionaryArg(args[i]) {
-				dictionaryItems = append(dictionaryItems, args[i])
-			} else {
-				return false, []string{}
-			}
+			return false, []string{}
 		}
 	}
 	return true, dictionaryItems
@@ -174,6 +156,55 @@ func isDictionaryArg(s string) bool {
 	} else {
 		return false
 	}
+}
+
+func getDefaultTargetName(projectName string) string {
+	if debug {
+		fmt.Printf("[DEBUG] Getting default target for project '%s'\n", projectName)
+	}
+	resData, resCode, _ := rdClient.call(http.MethodGet, "project/"+projectName+"/list", nil, "text/xml", false)
+	rdTargets := new(Html)
+	err := xml.Unmarshal(resData, &rdTargets)
+	if err != nil {
+		printStdError("\n%v\n\n", err)
+		os.Exit(1)
+	}
+	if resCode != 200 {
+		table := tablewriter.NewWriter(os.Stderr)
+		table.SetAlignment(tablewriter.ALIGN_LEFT)
+		table.SetAutoMergeCells(true)
+		for _, message := range getResponseMessages(resData) {
+			replacedTitle := strings.Replace(message.Span[0]+":", "Deployment Job ", "", -1)
+			table.Append([]string{replacedTitle, message.Span[1]})
+		}
+		printStdError("\n")
+		table.Render()
+		printStdError("\n")
+		os.Exit(1)
+	}
+	if len(rdTargets.Body.Div[1].Div[0].Ul.Li) != 0 {
+		for _, target := range rdTargets.Body.Div[1].Div[0].Ul.Li {
+			targetName := target.Span[1]
+			if debug {
+				fmt.Printf("[DEBUG] Checking hostnames for target '%s'\n", targetName)
+			}
+			serverName := strings.Split(targetName, ".")[0]
+			resData, _, _ := rdClient.call(http.MethodGet, "server/"+serverName, nil, "text/xml", false)
+			server := new(Server)
+			err := xml.Unmarshal(resData, &server)
+			if err != nil {
+				printStdError("\n%v\n\n", err)
+				os.Exit(1)
+			}
+			if debug {
+				fmt.Printf("[DEBUG] Hostnames found: %s\n", server.Hostnames)
+			}
+			if strings.Contains(server.Hostname, "localhost") {
+				return targetName
+			}
+		}
+	}
+	return ""
 }
 
 func checkSynchronousDeploy(jobId string) {
@@ -197,7 +228,7 @@ func checkSynchronousDeploy(jobId string) {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetAutoMergeCells(true)
-			for _, message := range getDeploymentMessages(resData) {
+			for _, message := range getResponseMessages(resData) {
 				table.Append([]string{message.Span[0], message.Span[1]})
 			}
 			table.Render()
@@ -228,7 +259,7 @@ func checkSynchronousDeploy(jobId string) {
 	}
 }
 
-func getDeploymentMessages(htmlContent []byte) []*Li {
+func getResponseMessages(htmlContent []byte) []*Li {
 	htmlObject := new(Html)
 	err := xml.Unmarshal(htmlContent, &htmlObject)
 	if err != nil {
@@ -239,7 +270,7 @@ func getDeploymentMessages(htmlContent []byte) []*Li {
 }
 
 func getjobStatus(htmlContent []byte) string {
-	for _, message := range getDeploymentMessages(htmlContent) {
+	for _, message := range getResponseMessages(htmlContent) {
 		if strings.Contains(message.Span[0], "Job Status") {
 			return message.Span[1]
 		}
@@ -248,7 +279,7 @@ func getjobStatus(htmlContent []byte) string {
 }
 
 func getJobId(htmlContent []byte) string {
-	for _, message := range getDeploymentMessages(htmlContent) {
+	for _, message := range getResponseMessages(htmlContent) {
 		if strings.Contains(message.Span[0], "Job ID") {
 			return message.Span[1]
 		}
@@ -257,7 +288,7 @@ func getJobId(htmlContent []byte) string {
 }
 
 func getLogFilename(htmlContent []byte) string {
-	for _, message := range getDeploymentMessages(htmlContent) {
+	for _, message := range getResponseMessages(htmlContent) {
 		if strings.Contains(message.Span[0], "File Path") {
 			return filepath.Base(message.Span[1])
 		}
