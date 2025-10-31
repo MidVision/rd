@@ -29,7 +29,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<!-- ******* Using default Go SDK ******* -->
-		<!-- <go.sdk.version>1.8.3</go.sdk.version> -->
+		<go.sdk.version>1.25.3</go.sdk.version>
 		<!-- <go.root>/usr/local/go</go.root> -->
 
 		<go.wrapper.plugin.version>2.3.10</go.wrapper.plugin.version>
@@ -60,10 +60,10 @@
 				<configuration>
 					<!-- ******* Using default Go SDK ******* -->
 					<!-- <goRoot>${go.root}</goRoot> -->
-					<!-- <goVersion>${go.sdk.version}</goVersion> -->
+					<goVersion>${go.sdk.version}</goVersion>
 					<!-- <goPath>${project.build.directory}</goPath> -->
 
-					<!-- <verbose>true</verbose> -->
+					<verbose>true</verbose>
 				</configuration>
 				<executions>
 					<execution>
