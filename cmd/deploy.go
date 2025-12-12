@@ -7,19 +7,21 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/xml"
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-var deployPackage, targetName string
+var deployPackage, targetName, dataDictionaryPath string
 var synchronous, logfile bool
 
 // deployCmd represents the deploy command
@@ -39,6 +41,18 @@ If no target name is specified the first one found with a 'localhost' hostname w
 		if !resParse {
 			cmd.Usage()
 			os.Exit(1)
+		}
+
+		// Include data dictionary items from a file if provided
+		if dataDictionaryPath != "" {
+			if debug {
+				fmt.Printf("[DEBUG] Parsing data dictionary file at '%s'...\n", dataDictionaryPath)
+			}
+			err := parseDataDictionaryFile(dataDictionaryPath, &dictionaryArguments)
+			if err != nil {
+				printStdError("\n%v\n\n", err)
+				os.Exit(1)
+			}
 		}
 
 		// Load the login session file - initialize the rdClient struct
@@ -70,7 +84,7 @@ If no target name is specified the first one found with a 'localhost' hostname w
 		urlBuffer.WriteString("deployment/" + projectName + "/runjob/deploy/" + serverName + "/" + installName + "/" + configName +
 			"?packageName=" + deployPackage)
 		for _, dictionaryArg := range dictionaryArguments {
-			urlBuffer.WriteString("&dictionaryItem=" + dictionaryArg)
+			urlBuffer.WriteString("&dictionaryItem=" + url.QueryEscape(dictionaryArg))
 		}
 
 		resData, resCode, _ := rdClient.call(http.MethodPut, urlBuffer.String(), nil, "text/xml", false)
@@ -113,6 +127,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&synchronous, "sync", "s", false, "Waits for the deployment to finish.")
 	deployCmd.Flags().BoolVarP(&logfile, "logfile", "l", false, "Retrieves the deployment log file. It must be used with the 'sync' option.")
 	deployCmd.Flags().StringVarP(&deployPackage, "package", "p", "", "The deployment package to deploy. It defaults to the latest version.")
+	deployCmd.Flags().StringVarP(&dataDictionaryPath, "dataDictionary", "a", "", "Path to a data dictionary file containing @@key@@=value pairs.")
 }
 
 // Returns a boolean value showing if the arguments were properly
@@ -266,6 +281,11 @@ func getResponseMessages(htmlContent []byte) []*Li {
 		printStdError("\n%v\n\n", err)
 		os.Exit(1)
 	}
+	if len(htmlObject.Body.Div) < 2 ||
+		len(htmlObject.Body.Div[1].Div) < 1 ||
+		len(htmlObject.Body.Div[1].Div[0].Ul.Li) == 0 {
+		return []*Li{}
+	}
 	return htmlObject.Body.Div[1].Div[0].Ul.Li
 }
 
@@ -294,4 +314,29 @@ func getLogFilename(htmlContent []byte) string {
 		}
 	}
 	return ""
+}
+
+func parseDataDictionaryFile(dataDictionaryFilePath string, dataDictionary *[]string) error {
+	file, err := os.Open(dataDictionaryFilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if !strings.Contains(line, "=") {
+			continue
+		}
+		dataDictionaryItem := strings.SplitN(line, "=", 2)
+		key := strings.TrimSpace(dataDictionaryItem[0])
+		value := strings.TrimSpace(dataDictionaryItem[1])
+
+		*dataDictionary = append(*dataDictionary, fmt.Sprintf("%s=%s", key, value))
+	}
+	return scanner.Err()
 }
