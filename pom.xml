@@ -3,7 +3,7 @@
 
 	<groupId>com.midvision.plugins</groupId>
 	<artifactId>rdcli</artifactId>
-	<version>1.6</version>
+	<version>1.7-SNAPSHOT</version>
 	<packaging>mvn-golang</packaging>
 
 	<name>RapidDeploy CLI</name>
@@ -273,6 +273,6 @@
 		<connection>scm:git:https://github.com/MidVision/rd.git</connection>
 		<developerConnection>scm:git:https://github.com/MidVision/rd.git</developerConnection>
 		<url>https://github.com/MidVision/rd</url>
-		<tag>rdcli-1.6</tag>
+		<tag>HEAD</tag>
 	</scm>
 </project>
