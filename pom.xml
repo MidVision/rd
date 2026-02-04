@@ -1,10 +1,12 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.midvision.plugins</groupId>
 	<artifactId>rdcli</artifactId>
 	<version>1.7-SNAPSHOT</version>
-	<packaging>mvn-golang</packaging>
+	<packaging>jar</packaging>
 
 	<name>RapidDeploy CLI</name>
 	<description>A command line interface to manage RapidDeploy.</description>
@@ -25,20 +27,49 @@
 		</developer>
 	</developers>
 
+	<inceptionYear>2017</inceptionYear>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-		<!-- ******* Using default Go SDK ******* -->
-		<go.sdk.version>1.25.3</go.sdk.version>
-		<!-- <go.root>/usr/local/go</go.root> -->
-
-		<go.wrapper.plugin.version>2.3.10</go.wrapper.plugin.version>
-
 		<maven.install.plugin.version>3.0.1</maven.install.plugin.version>
 		<maven.deploy.plugin.version>3.0.0</maven.deploy.plugin.version>
-	</properties>
 
-	<inceptionYear>2017</inceptionYear>
+		<!-- Go properties -->
+		<go.version>1.25.6</go.version>
+		<go.os>darwin</go.os>
+		<go.arch>arm64</go.arch>
+
+		<go.archive>go${go.version}.${go.os}-${go.arch}.tar.gz</go.archive>
+		<go.url>https://go.dev/dl/${go.archive}</go.url>
+		<go.install.dir>${project.build.directory}</go.install.dir>
+	</properties>
+	<profiles>
+		<profile>
+			<id>macos</id>
+			<activation>
+				<os>
+					<family>mac</family>
+				</os>
+			</activation>
+			<properties>
+				<go.os>darwin</go.os>
+				<go.arch>arm64</go.arch>
+			</properties>
+		</profile>
+		<profile>
+			<id>linux</id>
+			<activation>
+				<os>
+					<family>unix</family>
+					<name>Linux</name>
+				</os>
+			</activation>
+			<properties>
+				<go.os>linux</go.os>
+				<go.arch>amd64</go.arch>
+			</properties>
+		</profile>
+	</profiles>
 
 	<licenses>
 		<license>
@@ -53,122 +84,169 @@
 		<directory>${basedir}${file.separator}go</directory>
 		<plugins>
 			<plugin>
-				<groupId>com.igormaznitsa</groupId>
-				<artifactId>mvn-golang-wrapper</artifactId>
-				<version>${go.wrapper.plugin.version}</version>
-				<extensions>true</extensions>
-				<configuration>
-					<!-- ******* Using default Go SDK ******* -->
-					<!-- <goRoot>${go.root}</goRoot> -->
-					<goVersion>${go.sdk.version}</goVersion>
-					<!-- <goPath>${project.build.directory}</goPath> -->
-
-					<verbose>true</verbose>
-				</configuration>
+				<groupId>com.googlecode.maven-download-plugin</groupId>
+				<artifactId>download-maven-plugin</artifactId>
+				<version>1.6.8</version>
 				<executions>
 					<execution>
-						<id>default-build</id>
-						<phase>none</phase>
-					</execution>
-					<execution>
-						<id>mac-build</id>
+						<id>download-go</id>
+						<phase>generate-resources</phase>
 						<goals>
-							<goal>build</goal>
+							<goal>wget</goal>
 						</goals>
 						<configuration>
-							<targetOs>darwin</targetOs>
-							<packages>
-								<main>main.go</main>
-							</packages>
-							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}mac</resultFolder>
-							<resultName>${project.build.finalName}.bin</resultName>
+							<url>${go.url}</url>
+							<outputDirectory>${project.build.directory}</outputDirectory>
+							<overwrite>false</overwrite>
 						</configuration>
 					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
 					<execution>
-						<id>linux64-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
+						<id>unpack-go</id>
+						<phase>generate-resources</phase>
 						<configuration>
-							<targetOs>linux</targetOs>
-							<targetArch>amd64</targetArch>
-							<packages>
-								<main>main.go</main>
-							</packages>
-							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}linux64</resultFolder>
-							<resultName>${project.build.finalName}.bin</resultName>
+							<target>
+								<mkdir dir="${go.install.dir}" />
+								<untar
+									src="${project.build.directory}/${go.archive}"
+									dest="${go.install.dir}" compression="gzip" />
+								<chmod dir="${project.build.directory}/go/bin"
+									includes="**/*" perm="755" />
+								<chmod
+									dir="${project.build.directory}/go/pkg/tool/${go.os}_${go.arch}"
+									includes="**/*" perm="755" />
+							</target>
 						</configuration>
-					</execution>
-					<execution>
-						<id>linux32-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
-						<configuration>
-							<targetOs>linux</targetOs>
-							<targetArch>386</targetArch>
-							<packages>
-								<main>main.go</main>
-							</packages>
-							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}linux32</resultFolder>
-							<resultName>${project.build.finalName}.bin</resultName>
-						</configuration>
-					</execution>
-					<execution>
-						<id>windows64-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
-						<configuration>
-							<targetOs>windows</targetOs>
-							<targetArch>amd64</targetArch>
-							<packages>
-								<main>main.go</main>
-							</packages>
-							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}win64</resultFolder>
-							<resultName>${project.build.finalName}.exe</resultName>
-						</configuration>
-					</execution>
-					<execution>
-						<id>windows32-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
-						<configuration>
-							<targetOs>windows</targetOs>
-							<targetArch>386</targetArch>
-							<packages>
-								<main>main.go</main>
-							</packages>
-							<resultFolder>${project.build.directory}${file.separator}bin${file.separator}win32</resultFolder>
-							<resultName>${project.build.finalName}.exe</resultName>
-						</configuration>
-					</execution>
-					<execution>
-						<id>default-test</id>
-						<phase>none</phase>
-						<configuration>
-							<testFlags>
-								<flag>-x</flag>
-								<flag>-v</flag>
-							</testFlags>
-						</configuration>
-					</execution>
-					<execution>
-						<id>golang-run</id>
-						<phase>verify</phase>
 						<goals>
 							<goal>run</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<!-- macOS arm64 -->
+					<execution>
+						<id>build-mac</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
 						<configuration>
-							<packages>
-								<app>main.go</app>
-							</packages>
+							<executable>${project.build.directory}/go/bin/go</executable>
+							<environmentVariables>
+								<GOOS>darwin</GOOS>
+								<GOARCH>arm64</GOARCH>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>-o</argument>
+								<argument>
+									${project.build.directory}/bin/mac/${project.build.finalName}.bin</argument>
+								<argument>main.go</argument>
+							</arguments>
 						</configuration>
 					</execution>
+
+					<!-- linux amd64 -->
 					<execution>
-						<id>default-mvninstall</id>
-						<phase>none</phase>
+						<id>build-linux64</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${project.build.directory}/go/bin/go</executable>
+							<environmentVariables>
+								<GOOS>linux</GOOS>
+								<GOARCH>amd64</GOARCH>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>-o</argument>
+								<argument>
+									${project.build.directory}/bin/linux64/${project.build.finalName}.bin</argument>
+								<argument>main.go</argument>
+							</arguments>
+						</configuration>
+					</execution>
+
+					<!-- linux 386 -->
+					<execution>
+						<id>build-linux32</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${project.build.directory}/go/bin/go</executable>
+							<environmentVariables>
+								<GOOS>linux</GOOS>
+								<GOARCH>386</GOARCH>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>-o</argument>
+								<argument>
+									${project.build.directory}/bin/linux32/${project.build.finalName}.bin</argument>
+								<argument>main.go</argument>
+							</arguments>
+						</configuration>
+					</execution>
+
+					<!-- windows amd64 -->
+					<execution>
+						<id>build-win64</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${project.build.directory}/go/bin/go</executable>
+							<environmentVariables>
+								<GOOS>windows</GOOS>
+								<GOARCH>amd64</GOARCH>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>-o</argument>
+								<argument>
+									${project.build.directory}/bin/win64/${project.build.finalName}.exe</argument>
+								<argument>main.go</argument>
+							</arguments>
+						</configuration>
+					</execution>
+
+					<!-- windows 386 -->
+					<execution>
+						<id>build-win32</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${project.build.directory}/go/bin/go</executable>
+							<environmentVariables>
+								<GOOS>windows</GOOS>
+								<GOARCH>386</GOARCH>
+							</environmentVariables>
+							<arguments>
+								<argument>build</argument>
+								<argument>-o</argument>
+								<argument>
+									${project.build.directory}/bin/win32/${project.build.finalName}.exe</argument>
+								<argument>main.go</argument>
+							</arguments>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

@@ -1,6 +1,5 @@
 // Copyright © 2017 Rafael Ruiz Palacios <support@midvision.com>
 
-// TODO: provide a properties file as data ditionary.
 // TODO: provide log file path as a flag.
 // FIXME: "Configuration Name" not being shown in deployment summary.
 
