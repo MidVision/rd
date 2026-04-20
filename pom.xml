@@ -33,7 +33,7 @@
 		<maven.deploy.plugin.version>3.0.0</maven.deploy.plugin.version>
 
 		<!-- Go properties -->
-		<go.version>1.25.6</go.version>
+		<go.version>1.26.2</go.version>
 		<go.os>darwin</go.os>
 		<go.arch>arm64</go.arch>
 
