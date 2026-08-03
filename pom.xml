@@ -33,7 +33,7 @@
 		<maven.deploy.plugin.version>3.0.0</maven.deploy.plugin.version>
 
 		<!-- Go properties -->
-		<go.version>1.26.4</go.version>
+		<go.version>1.26.5</go.version>
 		<go.os>darwin</go.os>
 		<go.arch>arm64</go.arch>
 
@@ -142,6 +142,8 @@
 							</environmentVariables>
 							<arguments>
 								<argument>build</argument>
+								<argument>-ldflags</argument>
+								<argument>-X github.com/MidVision/rd/cmd.Version=${project.version}</argument>
 								<argument>-o</argument>
 								<argument>
 									${project.build.directory}/bin/mac/${project.build.finalName}.bin</argument>
@@ -165,6 +167,8 @@
 							</environmentVariables>
 							<arguments>
 								<argument>build</argument>
+								<argument>-ldflags</argument>
+								<argument>-X github.com/MidVision/rd/cmd.Version=${project.version}</argument>
 								<argument>-o</argument>
 								<argument>
 									${project.build.directory}/bin/linux64/${project.build.finalName}.bin</argument>
@@ -188,6 +192,8 @@
 							</environmentVariables>
 							<arguments>
 								<argument>build</argument>
+								<argument>-ldflags</argument>
+								<argument>-X github.com/MidVision/rd/cmd.Version=${project.version}</argument>
 								<argument>-o</argument>
 								<argument>
 									${project.build.directory}/bin/linux32/${project.build.finalName}.bin</argument>
@@ -211,6 +217,8 @@
 							</environmentVariables>
 							<arguments>
 								<argument>build</argument>
+								<argument>-ldflags</argument>
+								<argument>-X github.com/MidVision/rd/cmd.Version=${project.version}</argument>
 								<argument>-o</argument>
 								<argument>
 									${project.build.directory}/bin/win64/${project.build.finalName}.exe</argument>
@@ -234,6 +242,8 @@
 							</environmentVariables>
 							<arguments>
 								<argument>build</argument>
+								<argument>-ldflags</argument>
+								<argument>-X github.com/MidVision/rd/cmd.Version=${project.version}</argument>
 								<argument>-o</argument>
 								<argument>
 									${project.build.directory}/bin/win32/${project.build.finalName}.exe</argument>

@@ -17,12 +17,15 @@ var rdClient *RDClient = &RDClient{}
 // For debugging purposes
 var debug, quiet bool
 
+// Version is set at build time via -ldflags from the Maven project version.
+var Version = "development"
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:     "rd",
 	Short:   "Command line interface for the RapidDeploy tool.",
 	Long:    `RapidDeploy CLI - Command line interface for the RapidDeploy tool.`,
-	Version: "1.7",
+	Version: Version,
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
