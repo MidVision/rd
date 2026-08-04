@@ -24,10 +24,12 @@ type (
 	RDClient struct {
 		// URL and authentication token used to perform the calls.
 		// These parameters will be saved as a JSON file in the home folder.
+		// The username and password are only sent in the 'create token' request
+		// body during login and must never be persisted to the login file.
 		BaseUrl   *url.URL `json:"url"`
 		AuthToken string   `json:"token"`
-		Username  string   `json:"param1"`
-		Password  string   `json:"param2"`
+		Username  string   `json:"param1,omitempty"`
+		Password  string   `json:"param2,omitempty"`
 	}
 
 	// Declared here as it is used in different entity structs.
@@ -81,6 +83,14 @@ func (rdc *RDClient) loadLoginFile() error {
 
 	if err := json.Unmarshal(content, rdc); err != nil {
 		return fmt.Errorf("Invalid login session found!\nPlease, perform a new login before requesting any action.")
+	}
+
+	// Login files written by older versions contain the credentials:
+	// scrub them from memory and rewrite the file without them.
+	if rdc.Username != "" || rdc.Password != "" {
+		rdc.Username = ""
+		rdc.Password = ""
+		rdc.saveLoginFile()
 	}
 	return nil
 }

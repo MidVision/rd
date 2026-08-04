@@ -102,6 +102,11 @@ calling this command again.`,
 		fmt.Fprintf(w, "\t\t\n\n")
 		w.Flush()
 
+		// The credentials are only needed to create the authentication token,
+		// they must not be saved into the login session file.
+		rdClient.Username = ""
+		rdClient.Password = ""
+
 		// Save the rdClient struct into the login session file for future calls to RapidDeploy
 		if err := rdClient.saveLoginFile(); err != nil {
 			printStdError("\n%v\n\n", err)
