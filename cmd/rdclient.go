@@ -24,8 +24,9 @@ type (
 	RDClient struct {
 		// URL and authentication token used to perform the calls.
 		// These parameters will be saved as a JSON file in the home folder.
-		// The username and password are only sent in the 'create token' request
-		// body during login and must never be persisted to the login file.
+		// The username and password are never set by current code — the fields
+		// only remain so login files written by older versions can be detected
+		// and scrubbed on load.
 		BaseUrl   *url.URL `json:"url"`
 		AuthToken string   `json:"token"`
 		Username  string   `json:"param1,omitempty"`

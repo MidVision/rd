@@ -37,6 +37,11 @@ var loginCmd = &cobra.Command{
 It performs a login to a RapidDeploy server and keeps this
 session active for future commands to the RapidDeploy server.
 
+If no credentials are provided, the default username is used and the
+default passwords are tried in order: the AWS instance ID, the Azure
+machine ID and the default RapidDeploy password. To log in with custom
+credentials both '--username' and '--password' must be provided.
+
 This session can be finished by calling the 'logout' command or by
 calling this command again.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -44,8 +49,19 @@ calling this command again.`,
 			os.Stdout = nil
 		}
 
+		// Custom credentials must be given in full: mixing an explicit
+		// username or password with a default value is almost always a
+		// mistake, so it is rejected instead of guessed.
+		userSet := cmd.Flags().Changed("username")
+		passSet := cmd.Flags().Changed("password")
+		if userSet != passSet {
+			printStdError("\nThe '--username' and '--password' flags must be provided together.\n")
+			printStdError("Run the command without them to log in with the default credentials.\n\n")
+			os.Exit(1)
+		}
+
 		loginResult := false
-		if password == "" && username == defaultRdUser {
+		if !userSet {
 			if debug {
 				fmt.Printf("[DEBUG] Loging in with default AWS password...\n")
 			}
@@ -102,11 +118,6 @@ calling this command again.`,
 		fmt.Fprintf(w, "\t\t\n\n")
 		w.Flush()
 
-		// The credentials are only needed to create the authentication token,
-		// they must not be saved into the login session file.
-		rdClient.Username = ""
-		rdClient.Password = ""
-
 		// Save the rdClient struct into the login session file for future calls to RapidDeploy
 		if err := rdClient.saveLoginFile(); err != nil {
 			printStdError("\n%v\n\n", err)
@@ -120,7 +131,7 @@ func init() {
 
 	// The flags defined for this command
 	loginCmd.Flags().StringVar(&rdUrl, "url", "http://localhost:9090/MidVision", "URL used to connect to the RapidDeploy server.")
-	loginCmd.Flags().StringVar(&username, "username", "mvadmin", "Username used to connect to the RapidDeploy server.")
+	loginCmd.Flags().StringVar(&username, "username", defaultRdUser, "Username used to connect to the RapidDeploy server.")
 	loginCmd.Flags().StringVar(&password, "password", "", "Password used to connect to the RapidDeploy server.")
 }
 
@@ -135,13 +146,20 @@ func checkLogin(loginUrl, loginUser, loginPass string) bool {
 
 	// Initialize the rdClient
 	rdClient.BaseUrl = parsedUrl
-	rdClient.Username = loginUser
-	rdClient.Password = loginPass
 
 	// This is necessary so an error is not thrown for empty authentication token
 	rdClient.AuthToken = "token"
 
-	reqData, err := json.Marshal(rdClient)
+	// The credentials are sent in a dedicated request struct so they never
+	// reach the persisted rdClient struct. The 'param1'/'param2' keys must
+	// always be present in the request body, even when the values are empty,
+	// otherwise the server fails with an internal error.
+	reqData, err := json.Marshal(struct {
+		BaseUrl   *url.URL `json:"url"`
+		AuthToken string   `json:"token"`
+		Username  string   `json:"param1"`
+		Password  string   `json:"param2"`
+	}{rdClient.BaseUrl, rdClient.AuthToken, loginUser, loginPass})
 	if err != nil {
 		if debug {
 			fmt.Printf("[ERROR] Marshal rdClient: %v\n", err)
