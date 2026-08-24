@@ -9,7 +9,7 @@ Go CLI (cobra) to manage a RapidDeploy server over its REST API. Module `github.
 - [cmd/rdclient.go](cmd/rdclient.go): `RDClient` REST client. `login` obtains a token from `<url>/ws/user/create/token` and persists `{url, token, username, password}` as JSON to `~/.rapiddeploy` (0600); every other command starts with `rdClient.loadLoginFile()`. All requests go through `rdClient.call()` → `util.go:call()` (5s timeout, exits the process on connection/HTTP errors).
 - Responses are XML, unmarshalled into per-command structs (defined at the top of each command file); output is rendered with `tablewriter`. Some endpoints return HTML — the generic `Html/Div/Ul/Li` structs in rdclient.go parse those.
 - [cmd/login.go](cmd/login.go): if no password is given with the default user (`mvadmin`), it tries cloud-default passwords in order: AWS instance-id (via IMDSv2), Azure `/etc/machine-id`, then `mvadmin`.
-- No tests exist in this repo.
+- Tests: `go test ./cmd/` (don't use `./...` — it recurses into the unpacked Go toolchain under `go/`).
 
 ## Versioning — do not hardcode
 
@@ -22,7 +22,7 @@ Maven orchestrates the Go build ([pom.xml](pom.xml)):
 
 - `download-maven-plugin` fetches the **pinned Go toolchain** (`<go.version>` property) from go.dev, `maven-antrun-plugin` unpacks it into `./go/` (the Maven build directory, gitignored), then `exec-maven-plugin` cross-compiles five targets: mac (darwin/arm64), linux64, linux32, win64, win32 → `go/bin/<platform>/`.
 - `mvn compile` builds all binaries; `mvn install` also installs them with per-platform classifiers (`-mac.bin`, `-linux64.bin`, `-win64.exe`, ...).
-- **To upgrade Go**: change `<go.version>` in pom.xml (one line). Check both archives exist first: `go1.X.Y.darwin-arm64.tar.gz` and `go1.X.Y.linux-amd64.tar.gz` on go.dev (Jenkins builds on linux-amd64, local dev on mac). The `go 1.x` directive in [go.mod](go.mod) is the *minimum language version*, independent of the toolchain — it does not need to change with toolchain bumps.
+- **To upgrade Go**: change `<go.version>` in pom.xml (one line). Check both archives exist first: `go1.X.Y.darwin-arm64.tar.gz` and `go1.X.Y.linux-amd64.tar.gz` on go.dev (Jenkins builds on linux-amd64, local dev on mac). The `go 1.x` directive in [go.mod](go.mod) is the *minimum language version*, independent of the toolchain — it does not need to change with toolchain bumps. After bumping, `rm -rf go/go` before the local `mvn compile`: the new tarball is untarred *over* the old toolchain tree, and leftover sources from the old version break the build with `redeclared in this block` errors (CI is unaffected — releases run `clean` and build in a fresh checkout).
 - Local iteration without Maven: `go build -o rd main.go` works with any system Go ≥ the go.mod directive (binary reports `rd version development`).
 
 ## Releases
